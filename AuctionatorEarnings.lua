@@ -84,13 +84,29 @@ function Atr_GetEarningsText()
 	local totalBuyout, netEarnings, numAuctions = Atr_CalculateTotalEarnings();
 	
 	if (numAuctions == 0) then
-		return ZT("No active auctions");
+		local msg = "No active auctions";
+		if ZT then msg = ZT("No active auctions"); end
+		return msg;
 	end
 	
-	local text = string.format(ZT("Active Auctions: %d"), numAuctions);
-	text = text .. "\n" .. ZT("Total Buyout: ") .. PriceToMoneyString(totalBuyout);
-	text = text .. "\n" .. ZT("Net Earnings: ") .. PriceToMoneyString(netEarnings);
-	text = text .. "\n" .. ZT("AH Fee (5%%): ") .. PriceToMoneyString(totalBuyout - netEarnings);
+	local text = string.format("Subastas activas: %d", numAuctions);
+	if ZT then
+		text = string.format(ZT("Active Auctions: %d"), numAuctions);
+	end
+	
+	local lblTotal = "Total compra directa: ";
+	local lblNet = "Ganancias netas: ";
+	local lblFee = "Comisión CS (5%%): ";
+	
+	if ZT then
+		lblTotal = ZT("Total Buyout: ");
+		lblNet = ZT("Net Earnings: ");
+		lblFee = ZT("AH Fee (5%%): ");
+	end
+	
+	text = text .. "\n" .. lblTotal .. PriceToMoneyString(totalBuyout);
+	text = text .. "\n" .. lblNet .. PriceToMoneyString(netEarnings);
+	text = text .. "\n" .. lblFee .. PriceToMoneyString(totalBuyout - netEarnings);
 	
 	return text;
 end
@@ -101,45 +117,64 @@ end
 function Atr_GetEarningsShortText()
 	local totalBuyout, netEarnings, numAuctions = Atr_CalculateTotalEarnings();
 	
-	if (numAuctions == 0) then
-		return "";
+	local label = "Total si se venden: ";
+	if ZT then
+		label = ZT("Expected Earnings: ");
 	end
 	
-	return ZT("Expected Earnings: ") .. PriceToMoneyString(netEarnings);
+	return label .. PriceToMoneyString(netEarnings);
 end
 
 -----------------------------------------
 -- Actualiza el frame de ganancias si existe
 -----------------------------------------
 function Atr_UpdateEarningsDisplay()
-	if (Atr_EarningsFrame and Atr_EarningsFrame:IsShown()) then
-		local earningsText = Atr_GetEarningsText();
-		if (Atr_EarningsFrame_Text) then
-			Atr_EarningsFrame_Text:SetText(earningsText);
-		end
+	if not Atr_Earnings_Frame then
+		return;
 	end
 	
-	-- También actualizar el texto corto si existe
-	if (Atr_EarningsShort_Text) then
-		local shortText = Atr_GetEarningsShortText();
-		Atr_EarningsShort_Text:SetText(shortText);
+	if not Atr_EarningsShort_Text then
+		return;
 	end
+	
+	-- Forzar actualización de la lista de subastas
+	local shortText = Atr_GetEarningsShortText();
+	
+	Atr_EarningsShort_Text:SetText(shortText);
+	Atr_Earnings_Frame:Show();
 end
 
 -----------------------------------------
 -- Hook para actualizar cuando cambian las subastas
 -----------------------------------------
 local function OnAuctionOwnedListUpdate()
-	if (Atr_IsModeActiveAuctions() or Atr_IsTabSelected(SELL_TAB)) then
-		Atr_UpdateEarningsDisplay();
+	-- Verificar si estamos en la pestaña de Auctions (index 3)
+	if AuctionFrame and AuctionFrame:IsShown() then
+		local selectedTab = PanelTemplates_GetSelectedTab(AuctionFrame);
+		if selectedTab == 3 then
+			Atr_UpdateEarningsDisplay();
+		end
 	end
 end
 
 -- Registrar el hook
 local earningsFrame = CreateFrame("Frame");
 earningsFrame:RegisterEvent("AUCTION_OWNED_LIST_UPDATE");
+earningsFrame:RegisterEvent("AUCTION_HOUSE_SHOW");
 earningsFrame:SetScript("OnEvent", function(self, event, ...)
 	if (event == "AUCTION_OWNED_LIST_UPDATE") then
 		OnAuctionOwnedListUpdate();
+	elseif (event == "AUCTION_HOUSE_SHOW") then
+		-- Actualizar cuando se abre la casa de subastas
+		OnAuctionOwnedListUpdate();
 	end
 end);
+
+-----------------------------------------
+-- Función de inicialización
+-----------------------------------------
+function Atr_InitEarningsDisplay()
+	if Atr_Earnings_Frame and Atr_EarningsShort_Text then
+		Atr_UpdateEarningsDisplay();
+	end
+end

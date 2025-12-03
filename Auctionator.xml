@@ -991,11 +991,11 @@
 	
 
    <!-- Earnings Display Frame -->
-	<Frame name="Atr_Earnings_Frame" parent="Atr_Main_Panel" hidden="true">
-		<Size><AbsDimension x="220" y="50"/></Size>
+	<Frame name="Atr_Earnings_Frame" parent="UIParent" hidden="true" frameStrata="HIGH" toplevel="true">
+		<Size><AbsDimension x="220" y="45"/></Size>
 		<Anchors>
-			<Anchor point="RIGHT" relativeTo="Atr_CancelSelectionButton" relativePoint="LEFT">
-				<Offset><AbsDimension x="-10" y="0"/></Offset>
+			<Anchor point="CENTER">
+				<Offset><AbsDimension x="0" y="-200"/></Offset>
 			</Anchor>
 		</Anchors>
 		
@@ -1006,9 +1006,9 @@
 		</Backdrop>
 		
 		<Layers>
-			<Layer level="ARTWORK">
-				<FontString name="Atr_EarningsShort_Text" inherits="GameFontNormalSmall" justifyH="CENTER">
-					<Size><AbsDimension x="210" y="40"/></Size>
+			<Layer level="OVERLAY">
+				<FontString name="Atr_EarningsShort_Text" inherits="GameFontNormalLarge" justifyH="CENTER">
+					<Size><AbsDimension x="210" y="35"/></Size>
 					<Anchors>
 						<Anchor point="CENTER">
 							<Offset><AbsDimension x="0" y="0"/></Offset>
@@ -1020,9 +1020,16 @@
 		
 		<Scripts>
 			<OnLoad>
-				self:SetBackdropColor(0.0, 0.0, 0.0, 0.8);
-				self:SetBackdropBorderColor(0.6, 0.6, 0.0, 1);
+				self:SetBackdropColor(0.0, 0.0, 0.0, 0.9);
+				self:SetBackdropBorderColor(1.0, 0.82, 0.0, 1);
 			</OnLoad>
+			<OnShow>
+				-- Posicionar relativo al AuctionFrame cuando se muestra
+				if AuctionFrame and AuctionFrame:IsShown() then
+					self:ClearAllPoints();
+					self:SetPoint("BOTTOM", AuctionFrame, "BOTTOM", 0, 12);
+				end
+			</OnShow>
 		</Scripts>
 	</Frame>
 

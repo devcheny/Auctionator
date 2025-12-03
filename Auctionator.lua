@@ -818,6 +818,16 @@ function Atr_AuctionFrameTab_OnClick (self, index, down)
 			if (AP_ShowBid)	then	AP_ShowHide_Bid_Button(1);	end;
 			if (AP_ShowBO)	then	AP_ShowHide_BO_Button(1);	end;
 		end
+		
+		-- Mostrar frame de ganancias en la pestaña de Auctions (index 3)
+		if (index == 3 and Atr_UpdateEarningsDisplay) then
+			Atr_UpdateEarningsDisplay();
+		else
+			-- Ocultar en otras pestañas no-Auctionator
+			if (Atr_Earnings_Frame) then
+				Atr_Earnings_Frame:Hide();
+			end
+		end
 
 
 	elseif (Atr_IsAuctionatorTab(index)) then
@@ -860,7 +870,7 @@ function Atr_AuctionFrameTab_OnClick (self, index, down)
 		Atr_CheckActiveButton:Hide();
 		Atr_Back_Button:Hide()
 		
-		-- Ocultar el frame de ganancias por defecto
+		-- Siempre ocultar el frame de ganancias en pestañas Auctionator
 		if (Atr_Earnings_Frame) then
 			Atr_Earnings_Frame:Hide();
 		end
@@ -886,11 +896,6 @@ function Atr_AuctionFrameTab_OnClick (self, index, down)
 			
 			if (UIDropDownMenu_GetSelectedValue(Atr_DropDown1) == MODE_LIST_ACTIVE) then
 				Atr_CheckActiveButton:Show();
-				-- Mostrar el frame de ganancias en la pestaña de subastas activas
-				if (Atr_Earnings_Frame) then
-					Atr_Earnings_Frame:Show();
-					Atr_UpdateEarningsDisplay();
-				end
 			end
 		end
 		
@@ -3657,19 +3662,10 @@ function Atr_DropDown1_OnClick(self)
 	
 	if (mode == MODE_LIST_ALL) then
 		Atr_DisplayHlist();
-		-- Ocultar el frame de ganancias cuando se muestran todos los items
-		if (Atr_Earnings_Frame) then
-			Atr_Earnings_Frame:Hide();
-		end
 	end
 	
 	if (mode == MODE_LIST_ACTIVE) then
 		Atr_DisplayHlist();
-		-- Mostrar el frame de ganancias cuando se muestran los items activos
-		if (Atr_Earnings_Frame) then
-			Atr_Earnings_Frame:Show();
-			Atr_UpdateEarningsDisplay();
-		end
 	end
 	
 end

@@ -233,7 +233,7 @@ AtrL["Active Auctions: %d"] = "Subastas activas: %d"
 AtrL["Total Buyout: "] = "Total compra directa: "
 AtrL["Net Earnings: "] = "Ganancias netas: "
 AtrL["AH Fee (5%%): "] = "Comisión CS (5%%): "
-AtrL["Expected Earnings: "] = "Ganancias esperadas: "
+AtrL["Expected Earnings: "] = "Total si se venden: "
 
 end
  
