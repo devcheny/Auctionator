@@ -625,7 +625,7 @@
 
 		<Layers>
 			<Layer level="BACKGROUND">
-				<FontString text="Author:  Zirco & Cheny" inherits="GameFontDisableSmall" justifyH="LEFT" justifyV="TOP">
+				<FontString text="Author:  Zirco, Cheny" inherits="GameFontDisableSmall" justifyH="LEFT" justifyV="TOP">
 					<Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="30" y="35"/></Offset></Anchor></Anchors>
 				</FontString>
 				<FontString name="AuctionatorVersionText" inherits="GameFontDisableSmall" justifyH="LEFT" justifyV="TOP">
