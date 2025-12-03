@@ -1,4 +1,3 @@
-
 local addonName, addonTable = ...; 
 local zc = addonTable.zc;
 
@@ -990,12 +989,17 @@ ATR_FS_NULL			= 0;
 ATR_FS_STARTED		= 1;
 ATR_FS_ANALYZING	= 2;
 ATR_FS_CLEANING_UP	= 3;
+ATR_FS_WAITING		= 4;
 
 gAtr_FullScanState = ATR_FS_NULL;
 gAtr_FullScan_CurrentPage = 0;
 gAtr_FullScan_TotalPages = 0;
 gAtr_FullScan_AllData = {};
 gAtr_FullScan_StartTime = 0;
+gAtr_FullScan_LastQueryTime = 0;
+gAtr_FullScan_PageDelay = 0.4; -- Delay base entre páginas (segundos)
+gAtr_FullScan_NextQueryTime = 0;
+gAtr_FullScan_ScanTime = 0;
 
 
 -----------------------------------------
@@ -1022,27 +1026,46 @@ function Atr_FullScanStart()
 
 	local canQuery,canQueryAll = CanSendAuctionQuery();
 	
-	if (canQueryAll) then
-	
-		Atr_FullScanStatus:SetText (ZT("Scanning").."...");
-		Atr_FullScanStartButton:Disable();
-		Atr_FullScanDone:Disable();
-	
-		gAtr_FullScanState = ATR_FS_STARTED;
-
-		SortAuctionClearSort ("list");
-
-		gNumAdded = 0;
-		gNumUpdated = 0;
-		gAtr_FullScan_CurrentPage = 0;
-		gAtr_FullScan_TotalPages = 0;
-		gAtr_FullScan_AllData = {}; -- Acumular datos de todas las páginas
-		gAtr_FullScan_StartTime = time();
-
-		QueryAuctionItems ("", nil, nil, 0, 0, 0, 0, 0, 0, true);
-		
-		zc.msg_atr("Iniciando escaneo completo...");
+	-- Verificar si hay limitación de tiempo
+	local timeBlocked = false;
+	if (AUCTIONATOR_LAST_SCAN_TIME) then
+		local timeSinceLastScan = time() - AUCTIONATOR_LAST_SCAN_TIME;
+		if (timeSinceLastScan < 15*60) then
+			timeBlocked = true;
+			local remaining = math.ceil((15*60 - timeSinceLastScan) / 60);
+			zc.msg_atr("|cffff0000Error:|r Debes esperar "..remaining.." minuto(s) antes de escanear de nuevo.");
+			return;
+		end
 	end
+	
+	if (not canQuery and not canQueryAll) then
+		zc.msg_atr("|cffff0000Error:|r No se puede consultar la casa de subastas en este momento.");
+		zc.msg_atr("|cffaaaaaa- Asegúrate de estar cerca de un subastador|r");
+		zc.msg_atr("|cffaaaaaa- Espera unos segundos y vuelve a intentar|r");
+		return;
+	end
+	
+	Atr_FullScanStatus:SetText (ZT("Scanning").."...");
+	Atr_FullScanProgress:SetText("");
+	Atr_FullScanStartButton:Disable();
+	Atr_FullScanDone:Disable();
+
+	gAtr_FullScanState = ATR_FS_STARTED;
+
+	SortAuctionClearSort ("list");
+
+	gNumAdded = 0;
+	gNumUpdated = 0;
+	gAtr_FullScan_CurrentPage = 0;
+	gAtr_FullScan_TotalPages = 0;
+	gAtr_FullScan_AllData = {}; -- Acumular datos de todas las páginas
+	gAtr_FullScan_StartTime = time();
+	gAtr_FullScan_LastQueryTime = time();
+	gAtr_FullScan_NextQueryTime = time();
+
+	zc.msg_atr("|cff00ff00Escaneo iniciado con paginación inteligente|r");
+	
+	QueryAuctionItems ("", nil, nil, 0, 0, 0, 0, nil, nil);
 
 end
 
@@ -1114,17 +1137,55 @@ end
 function Atr_FullScanAnalyze()
 
 	local numBatchAuctions, totalAuctions = GetNumAuctionItems("list");
-
+	
 	-- Calcular total de páginas en la primera consulta
 	if (gAtr_FullScan_CurrentPage == 0) then
 		gAtr_FullScan_TotalPages = math.ceil(totalAuctions / 50); -- 50 items por página
-		local estimatedTime = math.ceil(gAtr_FullScan_TotalPages * 0.5); -- ~0.5 segundos por página
-		zc.msg_atr("|cff00ff00Escaneo iniciado:|r "..totalAuctions.." subastas en "..gAtr_FullScan_TotalPages.." páginas (~"..estimatedTime.."s)");
+		
+		-- Calcular delays inteligentes según el tamaño del escaneo
+		local avgDelay = gAtr_FullScan_PageDelay;
+		if (gAtr_FullScan_TotalPages > 500) then
+			-- Escaneos muy grandes (25000+ subastas): optimizado para <15min
+			avgDelay = 0.7;
+			gAtr_FullScan_PageDelay = 0.5; -- Aumentar delay base
+		elseif (gAtr_FullScan_TotalPages > 200) then
+			-- Escaneos grandes (10000+ subastas): balance entre velocidad y seguridad
+			avgDelay = 0.6;
+			gAtr_FullScan_PageDelay = 0.45;
+		elseif (gAtr_FullScan_TotalPages > 100) then
+			-- Escaneos medianos (5000+ subastas)
+			avgDelay = 0.5;
+			gAtr_FullScan_PageDelay = 0.4;
+		else
+			-- Escaneos pequeños: más rápido
+			avgDelay = 0.35;
+			gAtr_FullScan_PageDelay = 0.25;
+		end
+		
+		local estimatedTime = math.ceil(gAtr_FullScan_TotalPages * avgDelay);
+		local estimatedMinutes = math.floor(estimatedTime / 60);
+		local estimatedSeconds = estimatedTime % 60;
+		
+		local timeStr;
+		if (estimatedMinutes > 0) then
+			timeStr = estimatedMinutes.."m "..estimatedSeconds.."s";
+		else
+			timeStr = estimatedSeconds.."s";
+		end
+		
+		-- Mensaje según tamaño del escaneo
+		if (gAtr_FullScan_TotalPages > 500) then
+			zc.msg_atr("|cffff8800⚠ Escaneo masivo:|r "..totalAuctions.." subastas, "..gAtr_FullScan_TotalPages.." páginas (~"..timeStr..")");
+		elseif (gAtr_FullScan_TotalPages > 100) then
+			zc.msg_atr("|cffaaffaa"..totalAuctions.." subastas|r en "..gAtr_FullScan_TotalPages.." páginas (~"..timeStr..")");
+		else
+			zc.msg_atr("|cffaaffaa"..totalAuctions.." subastas|r en "..gAtr_FullScan_TotalPages.." páginas");
+		end
 	end
 	
 	-- Verificar si recibimos datos
-	if (numBatchAuctions == 0) then
-		-- Ir directo al procesamiento
+	if (numBatchAuctions == 0 and gAtr_FullScan_CurrentPage < gAtr_FullScan_TotalPages) then
+		-- Ir directo al procesamiento si no hay más datos pero no hemos llegado al final
 		gAtr_FullScan_CurrentPage = gAtr_FullScan_TotalPages;
 	end
 
@@ -1139,7 +1200,10 @@ function Atr_FullScanAnalyze()
 	gAtr_FullScan_CurrentPage = gAtr_FullScan_CurrentPage + 1;
 	
 	-- Calcular progreso y tiempo
-	local progress = math.floor((gAtr_FullScan_CurrentPage / gAtr_FullScan_TotalPages) * 100);
+	local progress = 0;
+	if (gAtr_FullScan_TotalPages > 0) then
+		progress = math.floor((gAtr_FullScan_CurrentPage / gAtr_FullScan_TotalPages) * 100);
+	end
 	local elapsed = time() - gAtr_FullScan_StartTime;
 	local remaining = 0;
 	if (gAtr_FullScan_CurrentPage > 0 and gAtr_FullScan_CurrentPage < gAtr_FullScan_TotalPages) then
@@ -1147,25 +1211,80 @@ function Atr_FullScanAnalyze()
 		remaining = math.ceil((gAtr_FullScan_TotalPages - gAtr_FullScan_CurrentPage) * timePerPage);
 	end
 	
-	local statusText = ZT("Scanning").." "..progress.."%";
-	if (remaining > 0) then
-		statusText = statusText.." (~"..remaining.."s)";
+	-- Actualizar UI con progreso
+	Atr_FullScanStatus:SetText(ZT("Scanning").."...");
+	
+	local progressText = progress.."%";
+	if (gAtr_FullScan_TotalPages > 0) then
+		progressText = progressText .. " ("..gAtr_FullScan_CurrentPage.."/"..gAtr_FullScan_TotalPages..")";
 	end
-	Atr_FullScanStatus:SetText(statusText);
+	if (remaining > 0) then
+		local remMin = math.floor(remaining / 60);
+		local remSec = remaining % 60;
+		if (remMin > 0) then
+			progressText = progressText.." (~"..remMin.."m "..remSec.."s)";
+		else
+			progressText = progressText.." (~"..remSec.."s)";
+		end
+	end
+	Atr_FullScanProgress:SetText(progressText);
+	
+	-- Mostrar progreso en chat (solo checkpoints importantes)
+	if (gAtr_FullScan_TotalPages > 20) then
+		if (progress == 25 or progress == 50 or progress == 75) then
+			zc.msg_atr("|cffaaffaa"..progress.."%|r completado ("..gAtr_FullScan_CurrentPage.."/"..gAtr_FullScan_TotalPages.." páginas)");
+		end
+	end
 
-	-- Si hay más páginas, consultar la siguiente
+	-- Si hay más páginas, preparar siguiente consulta con delay
 	if (gAtr_FullScan_CurrentPage < gAtr_FullScan_TotalPages and numBatchAuctions > 0) then
-		gAtr_FullScanState = ATR_FS_STARTED;
-		QueryAuctionItems ("", nil, nil, 0, 0, 0, gAtr_FullScan_CurrentPage, 0, 0, true);
+		-- Calcular delay variable para parecer más humano
+		local baseDelay = gAtr_FullScan_PageDelay;
+		local randomVariation = math.random(-100, 300) / 1000; -- Variación aleatoria mayor
+		local totalDelay = baseDelay + randomVariation;
+		
+		-- Sistema de pausas progresivas para escaneos grandes (optimizado para <15min)
+		if (gAtr_FullScan_TotalPages > 500) then
+			-- Escaneos masivos (37000+ subastas): pausas optimizadas
+			if (gAtr_FullScan_CurrentPage % 20 == 0) then
+				totalDelay = totalDelay + math.random(150, 300) / 1000; -- Pausa cada 20 páginas
+			end
+			if (gAtr_FullScan_CurrentPage % 100 == 0) then
+				totalDelay = totalDelay + math.random(500, 1000) / 1000; -- Pausa media cada 100
+			end
+		elseif (gAtr_FullScan_TotalPages > 200) then
+			-- Escaneos grandes: pausas moderadas
+			if (gAtr_FullScan_CurrentPage % 25 == 0) then
+				totalDelay = totalDelay + math.random(200, 400) / 1000;
+			end
+			if (gAtr_FullScan_CurrentPage % 50 == 0) then
+				totalDelay = totalDelay + math.random(400, 800) / 1000;
+			end
+		else
+			-- Escaneos pequeños/medianos: pausas ligeras
+			if (gAtr_FullScan_CurrentPage % 30 == 0) then
+				totalDelay = totalDelay + math.random(150, 300) / 1000;
+			end
+		end
+		
+		gAtr_FullScanState = ATR_FS_WAITING;
+		gAtr_FullScan_NextQueryTime = time() + totalDelay;
 		return;
 	end
 
 	-- Todas las páginas escaneadas, procesar datos
 	gAtr_FullScanState = ATR_FS_ANALYZING;
 	Atr_FullScanStatus:SetText (ZT("Processing"));
+	Atr_FullScanProgress:SetText("");
 	
-	local scanTime = time() - gAtr_FullScan_StartTime;
-	zc.msg_atr("|cff00ff00Escaneo completado:|r "..#gAtr_FullScan_AllData.." items en "..scanTime.." segundos. Procesando datos...");
+	gAtr_FullScan_ScanTime = time() - gAtr_FullScan_StartTime;
+	local scanMin = math.floor(gAtr_FullScan_ScanTime / 60);
+	local scanSec = math.floor(gAtr_FullScan_ScanTime % 60);
+	local timeText = string.format("%.0fs", gAtr_FullScan_ScanTime);
+	if (scanMin > 0) then
+		timeText = scanMin.."m "..scanSec.."s";
+	end
+	zc.msg_atr("|cff00ff00✓ Escaneo completado:|r "..#gAtr_FullScan_AllData.." items en "..timeText);
 
 	local lowprices = {};
 	local x;
@@ -1258,13 +1377,21 @@ function Atr_FullScanAnalyze()
 	Atr_FullScanStartButton:Enable();
 	Atr_FullScanDone:Enable();
 	Atr_FullScanStatus:SetText ("");
+	Atr_FullScanProgress:SetText("");
 	
-	Atr_FSR_scanned_count:SetText	(#gAtr_FullScan_AllData);
+	local scanMin = math.floor(gAtr_FullScan_ScanTime / 60);
+	local scanSec = math.floor(gAtr_FullScan_ScanTime % 60);
+	local timeText = string.format("%.2fs", gAtr_FullScan_ScanTime);
+	if (scanMin > 0) then
+		timeText = scanMin.."m "..scanSec.."s";
+	end
+
+	Atr_FSR_scanned_count:SetText	(#gAtr_FullScan_AllData .. " ("..gAtr_FullScan_TotalPages.." " .. ZT("pages") .. ")");
+	Atr_FSR_time_count:SetText(timeText);
 	Atr_FSR_added_count:SetText		(gNumAdded);
 	Atr_FSR_updated_count:SetText	(gNumUpdated);
 	Atr_FSR_ignored_count:SetText	(totalUniqueItems - (gNumAdded + gNumUpdated));
 	
-	Atr_FullScanHTML:Hide();
 	Atr_FullScanResults:Show();
 	
 	Atr_FullScanResults:SetBackdropColor (0.3, 0.3, 0.4);
@@ -1300,6 +1427,7 @@ function Atr_ShowFullScanFrame()
 	
 	Atr_UpdateFullScanFrame();
 	Atr_FullScanStatus:SetText ("");
+	Atr_FullScanProgress:SetText("");
 
 	local expText = "<html><body>"
 					.."<p>"
@@ -1333,26 +1461,29 @@ function Atr_UpdateFullScanFrame()
 	if (canQueryAll) then
 		Atr_FullScanStatus:SetText ("");
 		Atr_FullScanStartButton:Enable();
-		Atr_FullScanNext:SetText(ZT("Now"));
+		Atr_FullScanNext:SetText("|cff00ff00Sí|r");
 	else	
 		Atr_FullScanStartButton:Disable();
 
 		if (AUCTIONATOR_LAST_SCAN_TIME) then
-			local when = 15*60 - (time() - AUCTIONATOR_LAST_SCAN_TIME);
+			local whenSeconds = 15*60 - (time() - AUCTIONATOR_LAST_SCAN_TIME);
 		
-			when = math.floor (when/60);
-		
-			if (when == 0) then
-				Atr_FullScanNext:SetText (ZT("in less than a minute"));
-			elseif (when == 1) then
-				Atr_FullScanNext:SetText (ZT("in about one minute"));
-			elseif (when > 0) then
-				Atr_FullScanNext:SetText (string.format (ZT("in about %d minutes"), when));
+			if (whenSeconds <= 0) then
+				-- Puede escanear pero CanSendAuctionQuery devuelve false por otra razón
+				Atr_FullScanNext:SetText("|cff00ff00Sí|r");
+				Atr_FullScanStartButton:Enable();
+			elseif (whenSeconds < 60) then
+				Atr_FullScanNext:SetText ("|cffff8800"..whenSeconds.."s|r");
 			else
-				Atr_FullScanNext:SetText (ZT("unknown"));
+				local whenMinutes = math.ceil(whenSeconds / 60);
+				if (whenMinutes == 1) then
+					Atr_FullScanNext:SetText ("|cffff8800~1 min|r");
+				else
+					Atr_FullScanNext:SetText ("|cffff8800~"..whenMinutes.." min|r");
+				end
 			end
 		else
-			Atr_FullScanNext:SetText (ZT("unknown"));
+			Atr_FullScanNext:SetText("|cff00ff00Sí|r");
 		end
 	end
 end
@@ -1360,6 +1491,22 @@ end
 -----------------------------------------
 
 function Atr_FullScanFrameIdle()
+
+	if (gAtr_FullScanState == ATR_FS_WAITING) then
+		-- Verificar si es hora de hacer la siguiente consulta
+		local currentTime = time();
+		if (currentTime >= gAtr_FullScan_NextQueryTime) then
+			local canQuery = CanSendAuctionQuery();
+			if (canQuery) then
+				gAtr_FullScanState = ATR_FS_STARTED;
+				gAtr_FullScan_LastQueryTime = currentTime;
+				QueryAuctionItems ("", nil, nil, 0, 0, 0, gAtr_FullScan_CurrentPage, nil, nil);
+			else
+				-- Si no podemos consultar aún, esperar un poco más
+				gAtr_FullScan_NextQueryTime = currentTime + 0.5;
+			end
+		end
+	end
 
 	if (gAtr_FullScanState == ATR_FS_CLEANING_UP) then
 	
@@ -1375,6 +1522,8 @@ function Atr_FullScanFrameIdle()
 			-- Resetear variables de escaneo
 			gAtr_FullScan_CurrentPage = 0;
 			gAtr_FullScan_TotalPages = 0;
+			gAtr_FullScan_LastQueryTime = 0;
+			gAtr_FullScan_NextQueryTime = 0;
 			
 			-- Actualizar el frame para habilitar el botón
 			Atr_UpdateFullScanFrame();

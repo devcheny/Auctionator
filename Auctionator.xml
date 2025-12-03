@@ -948,9 +948,7 @@
 				</Anchors>
 
 				<Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border">
-					<EdgeSize>
-						<AbsValue val="16"/>
-					</EdgeSize>
+					<EdgeSize><AbsValue val="16"/></EdgeSize>
 				</Backdrop>
 			</Frame>
 				
@@ -1230,7 +1228,10 @@
 					<Anchors><Anchor point="TOPLEFT"><Offset x="150" y="-105"/></Anchor></Anchors>
 				</FontString>
 				<FontString name="Atr_FullScanStatus" inherits="GameFontNormal" text="">
-					<Anchors><Anchor point="TOPLEFT"><Offset x="27" y="-140"/></Anchor></Anchors>
+					<Anchors><Anchor point="TOPLEFT"><Offset x="27" y="-135"/></Anchor></Anchors>
+				</FontString>
+				<FontString name="Atr_FullScanProgress" inherits="GameFontHighlightSmall" text="">
+					<Anchors><Anchor point="TOPLEFT" relativeTo="Atr_FullScanStatus" relativePoint="BOTTOMLEFT"><Offset x="0" y="-2"/></Anchor></Anchors>
 				</FontString>
 			</Layer>
 
@@ -1259,7 +1260,7 @@
 			</Button>
 
 			<SimpleHTML name="Atr_FullScanHTML">
-				<Size><AbsDimension x="405" y="300" /></Size>		
+				<Size><AbsDimension x="405" y="150" /></Size>		
 				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="27" y="-175"/></Offset></Anchor></Anchors>
 				<FontString inherits="GameFontLightGraySmall"/>
 				<FontStringHeader1 inherits="GameFontNormal"/>
@@ -1267,8 +1268,8 @@
 
 			<Frame name="Atr_FullScanResults" hidden="true">
 				<Anchors>
-					<Anchor point="TOPLEFT"><Offset><AbsDimension y="-195" x="70"/></Offset></Anchor>
-					<Anchor point="BOTTOMRIGHT"><Offset><AbsDimension y="30" x="-70"/></Offset></Anchor>
+					<Anchor point="TOPLEFT" relativeTo="Atr_FullScanHTML" relativePoint="BOTTOMLEFT"><Offset><AbsDimension y="-10" x="-40"/></Offset></Anchor>
+					<Anchor point="BOTTOMRIGHT" relativeTo="Atr_FullScanHTML" relativePoint="BOTTOMRIGHT"><Offset><AbsDimension y="-120" x="40"/></Offset></Anchor>
 				</Anchors>
 
 				<Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border">
@@ -1279,15 +1280,23 @@
 					<Layer level="ARTWORK">
 
 						<FontString name="Atr_FSR_scanned_text" inherits="GameFontNormal" text="Auctions scanned:">
-							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-40"/></Anchor></Anchors>
+							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-15"/></Anchor></Anchors>
 						</FontString>
 
 						<FontString name="Atr_FSR_scanned_count" inherits="GameFontHighlight" text="">
 							<Anchors><Anchor point="LEFT" relativeTo="Atr_FSR_scanned_text" relativePoint="RIGHT"><Offset x="15"/></Anchor></Anchors>
 						</FontString>
 
+						<FontString name="Atr_FSR_time_text" inherits="GameFontNormal" text="Scan time:">
+							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-35"/></Anchor></Anchors>
+						</FontString>
+
+						<FontString name="Atr_FSR_time_count" inherits="GameFontHighlight" text="">
+							<Anchors><Anchor point="LEFT" relativeTo="Atr_FSR_time_text" relativePoint="RIGHT"><Offset x="15"/></Anchor></Anchors>
+						</FontString>
+
 						<FontString name="Atr_FSR_added_text" inherits="GameFontNormal" text="Items added:">
-							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-65"/></Anchor></Anchors>
+							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-55"/></Anchor></Anchors>
 						</FontString>
 
 						<FontString name="Atr_FSR_added_count" inherits="GameFontHighlight">
@@ -1295,7 +1304,7 @@
 						</FontString>
 
 						<FontString name="Atr_FSR_updated_text" inherits="GameFontNormal" text="Items updated:">
-							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-90"/></Anchor></Anchors>
+							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-75"/></Anchor></Anchors>
 						</FontString>
 
 						<FontString name="Atr_FSR_updated_count" inherits="GameFontHighlight">
@@ -1303,7 +1312,7 @@
 						</FontString>
 
 						<FontString name="Atr_FSR_ignored_text" inherits="GameFontNormal" text="Items ignored:">
-							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-115"/></Anchor></Anchors>
+							<Anchors><Anchor point="TOPRIGHT"><Offset x="-170" y="-95"/></Anchor></Anchors>
 						</FontString>
 
 						<FontString name="Atr_FSR_ignored_count" inherits="GameFontHighlight">
