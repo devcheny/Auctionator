@@ -236,6 +236,58 @@ end
 
 -----------------------------------------
 
+function Atr_GetAuctionPriceAverage (itemName, maxSamples)
+	-- Calcula la media de los últimos precios vistos en el historial de subastas
+	if (itemName == nil) then
+		return nil;
+	end
+	
+	maxSamples = maxSamples or 10; -- Por defecto, últimos 10 precios
+	
+	local prices = {};
+	
+	if (AUCTIONATOR_PRICING_HISTORY and AUCTIONATOR_PRICING_HISTORY[itemName]) then
+		for tag, hist in pairs (AUCTIONATOR_PRICING_HISTORY[itemName]) do
+			if (tag ~= "is") then
+				-- ParseHist devuelve: when, type, price
+				local when, type, price = ParseHist (tag, hist);
+				if (price and price > 0) then
+					table.insert(prices, {when = when, price = price});
+				end
+			end
+		end
+	end
+	
+	-- Si no hay historial, intentar obtener del scan DB
+	if (#prices == 0 and gAtr_ScanDB[itemName]) then
+		return gAtr_ScanDB[itemName];
+	end
+	
+	-- Si no hay suficientes datos
+	if (#prices == 0) then
+		return nil;
+	end
+	
+	-- Ordenar por fecha (más reciente primero)
+	table.sort(prices, function(a, b) return a.when > b.when end);
+	
+	-- Calcular media de los últimos N precios
+	local sum = 0;
+	local count = 0;
+	for i = 1, math.min(#prices, maxSamples) do
+		sum = sum + prices[i].price;
+		count = count + 1;
+	end
+	
+	if (count > 0) then
+		return math.floor(sum / count);
+	end
+	
+	return nil;
+end
+
+-----------------------------------------
+
 local function Atr_CalcTextWid (price)
 
 	local wid = 15;
@@ -821,6 +873,18 @@ local function ShowTipWithPricing (tip, link, num)
 			tip:AddDoubleLine (ZT("Auction")..xstring, "|cFFFFFFFF"..zc.priceToMoneyString (auctionPrice));
 		else
 			tip:AddDoubleLine (ZT("Auction")..xstring, "|cFFFFFFFF"..ZT("unknown").."  ");
+		end
+		
+		-- Agregar media de precios de subasta
+		if (not isBOP and not isQuest) then
+			local avgPrice = Atr_GetAuctionPriceAverage(itemName, 10);
+			if (avgPrice ~= nil) then
+				local displayAvg = avgPrice;
+				if (num and showStackPrices) then
+					displayAvg = avgPrice * num;
+				end
+				tip:AddDoubleLine (ZT("Auction avg")..xstring, "|cFF88AAFF"..zc.priceToMoneyString (displayAvg));
+			end
 		end
 	end
 	
