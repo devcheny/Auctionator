@@ -1368,6 +1368,8 @@ function Atr_FullScanAnalyze()
 	-- 	Atr_PrintBargains();
 	-- end
 	
+	zc.msg_atr("|cff00ff00✓ Base de datos actualizada:|r "..gNumAdded.." items añadidos, "..gNumUpdated.." actualizados.");
+	
 	gAtr_FullScanState = ATR_FS_CLEANING_UP;
 
 	Atr_FullScanMoreDetails();
