@@ -7,11 +7,11 @@ local zc = addonTable.zc;
 local AuctionHouseCut = 0.05; -- La casa de subastas se queda con el 5% de las ventas
 
 -----------------------------------------
--- Convierte precio a string con formato de oro/plata/cobre
+-- Convierte precio a string con formato de oro/plata/cobre con iconos
 -----------------------------------------
 local function PriceToMoneyString(price)
 	if not price or price == 0 then
-		return "0|cffffd700g|r";
+		return "0|TInterface\\MoneyFrame\\UI-GoldIcon:0:0:2:0|t";
 	end
 	
 	local gold = math.floor(price / 10000);
@@ -20,15 +20,15 @@ local function PriceToMoneyString(price)
 	
 	local str = "";
 	if gold > 0 then
-		str = str .. gold .. "|cffffd700g|r";
+		str = str .. gold .. "|TInterface\\MoneyFrame\\UI-GoldIcon:0:0:2:0|t";
 	end
 	if silver > 0 then
 		if str ~= "" then str = str .. " "; end
-		str = str .. silver .. "|cffc7c7cfs|r";
+		str = str .. silver .. "|TInterface\\MoneyFrame\\UI-SilverIcon:0:0:2:0|t";
 	end
 	if copper > 0 or str == "" then
 		if str ~= "" then str = str .. " "; end
-		str = str .. copper .. "|cffeda55fc|r";
+		str = str .. copper .. "|TInterface\\MoneyFrame\\UI-CopperIcon:0:0:2:0|t";
 	end
 	
 	return str;
