@@ -1,7 +1,38 @@
 -- AuctionatorEarnings.lua
 -- Funcionalidad para calcular y mostrar las ganancias totales de las subastas activas
 
+local addonName, addonTable = ...; 
+local zc = addonTable.zc;
+
 local AuctionHouseCut = 0.05; -- La casa de subastas se queda con el 5% de las ventas
+
+-----------------------------------------
+-- Convierte precio a string con formato de oro/plata/cobre
+-----------------------------------------
+local function PriceToMoneyString(price)
+	if not price or price == 0 then
+		return "0|cffffd700g|r";
+	end
+	
+	local gold = math.floor(price / 10000);
+	local silver = math.floor((price % 10000) / 100);
+	local copper = price % 100;
+	
+	local str = "";
+	if gold > 0 then
+		str = str .. gold .. "|cffffd700g|r";
+	end
+	if silver > 0 then
+		if str ~= "" then str = str .. " "; end
+		str = str .. silver .. "|cffc7c7cfs|r";
+	end
+	if copper > 0 or str == "" then
+		if str ~= "" then str = str .. " "; end
+		str = str .. copper .. "|cffeda55fc|r";
+	end
+	
+	return str;
+end
 
 -----------------------------------------
 -- Calcula el total de ganancias esperadas de todas las subastas activas
@@ -57,9 +88,9 @@ function Atr_GetEarningsText()
 	end
 	
 	local text = string.format(ZT("Active Auctions: %d"), numAuctions);
-	text = text .. "\n" .. ZT("Total Buyout: ") .. zc.priceToMoneyString(totalBuyout, true);
-	text = text .. "\n" .. ZT("Net Earnings: ") .. zc.priceToMoneyString(netEarnings, true);
-	text = text .. "\n" .. ZT("AH Fee (5%%): ") .. zc.priceToMoneyString(totalBuyout - netEarnings, true);
+	text = text .. "\n" .. ZT("Total Buyout: ") .. PriceToMoneyString(totalBuyout);
+	text = text .. "\n" .. ZT("Net Earnings: ") .. PriceToMoneyString(netEarnings);
+	text = text .. "\n" .. ZT("AH Fee (5%%): ") .. PriceToMoneyString(totalBuyout - netEarnings);
 	
 	return text;
 end
@@ -74,7 +105,7 @@ function Atr_GetEarningsShortText()
 		return "";
 	end
 	
-	return ZT("Expected Earnings: ") .. zc.priceToMoneyString(netEarnings, true);
+	return ZT("Expected Earnings: ") .. PriceToMoneyString(netEarnings);
 end
 
 -----------------------------------------
