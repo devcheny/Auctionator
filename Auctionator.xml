@@ -991,11 +991,11 @@
 	
 
    <!-- Earnings Display Frame -->
-	<Frame name="Atr_Earnings_Frame" parent="Atr_Main_Panel" hidden="false">
-		<Size><AbsDimension x="200" y="80"/></Size>
+	<Frame name="Atr_Earnings_Frame" parent="Atr_Main_Panel" hidden="true">
+		<Size><AbsDimension x="220" y="50"/></Size>
 		<Anchors>
-			<Anchor point="BOTTOMLEFT" relativeTo="Atr_Main_Panel">
-				<Offset><AbsDimension x="10" y="45"/></Offset>
+			<Anchor point="RIGHT" relativeTo="Atr_CancelSelectionButton" relativePoint="LEFT">
+				<Offset><AbsDimension x="-10" y="0"/></Offset>
 			</Anchor>
 		</Anchors>
 		
@@ -1007,11 +1007,11 @@
 		
 		<Layers>
 			<Layer level="ARTWORK">
-				<FontString name="Atr_EarningsShort_Text" inherits="GameFontNormalSmall" justifyH="LEFT">
-					<Size><AbsDimension x="190" y="70"/></Size>
+				<FontString name="Atr_EarningsShort_Text" inherits="GameFontNormalSmall" justifyH="CENTER">
+					<Size><AbsDimension x="210" y="40"/></Size>
 					<Anchors>
-						<Anchor point="TOPLEFT">
-							<Offset><AbsDimension x="8" y="-8"/></Offset>
+						<Anchor point="CENTER">
+							<Offset><AbsDimension x="0" y="0"/></Offset>
 						</Anchor>
 					</Anchors>
 				</FontString>
@@ -1020,8 +1020,8 @@
 		
 		<Scripts>
 			<OnLoad>
-				self:SetBackdropColor(0.1, 0.1, 0.1, 0.9);
-				self:SetBackdropBorderColor(0.4, 0.4, 0.4, 1);
+				self:SetBackdropColor(0.0, 0.0, 0.0, 0.8);
+				self:SetBackdropBorderColor(0.6, 0.6, 0.0, 1);
 			</OnLoad>
 		</Scripts>
 	</Frame>
