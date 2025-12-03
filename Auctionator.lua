@@ -1,4 +1,3 @@
-
 AuctionatorVersion = "???";		-- set from toc upon loading
 AuctionatorAuthor  = "Zirco, Cheny";
 
@@ -2153,6 +2152,13 @@ end
 
 function Atr_OnAuctionHouseClosed()
 
+	-- Si hay una tarea en segundo plano, no limpiar todo.
+	if (gAtr_FullScanState ~= ATR_FS_NULL or gBuyState ~= ATR_BUY_NULL or gAtr_CheckingActive_State ~= ATR_CACT_NULL) then
+		-- Ocultar diálogos, pero no detener las operaciones.
+		Atr_HideAllDialogs();
+		return;
+	end
+
 	Atr_SwitchTo_BlizzItemOnClick();
 	
 	Atr_HideAllDialogs();
@@ -2918,11 +2924,10 @@ function Atr_ShowSearchSummary()
 
 	Atr_Col1_Heading:Hide();
 	Atr_Col3_Heading:Hide();
-	Atr_Col1_Heading_Button:Show();
-	Atr_Col3_Heading_Button:Show();
-	Atr_Col4_Heading:Show();
+	Atr_Col4_Heading:Hide();
+	Atr_Col1_Heading_Button:Hide();
+	Atr_Col3_Heading_Button:Hide();
 
-	gCurrentPane.activeSearch:UpdateArrows ();
 
 	local numrows = gCurrentPane.activeSearch:NumScans();
 
@@ -4083,7 +4088,7 @@ function Atr_CancelUndercuts_CurrentScan(confirmed)
 				return;
 			end
 			
-			Atr_CancelAuction_ByIndex (x);
+			Atr_CancelAuction (x);
 		end
 	end
 
