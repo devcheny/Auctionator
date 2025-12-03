@@ -1,7 +1,7 @@
 
--- Zirco's utilities
+-- Zirco & Cheny's utilities
 
--- This module should contain no globals as it is intended to be "linked" in to each of Zirco's addons
+-- This module should contain no globals as it is intended to be "linked" in to each of Zirco & Cheny's addons
 
 
 local addonName, addonTable = ...; 

@@ -233,7 +233,7 @@ WoW\WTF\Account\TU_CUENTA\SavedVariables\Auctionator.lua
 
 ## Créditos
 
-**Autor Original:** Zirco  
+**Autor Original:** Zirco & Cheny  
 **Versión Personalizada:** DevCheny  
 **Traducción Española:** Comunidad  
 

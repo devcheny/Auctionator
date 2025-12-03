@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: Auctionator_Cheny
 ## Version: 2.6.3
-## Author: Zirco
+## Author: Zirco & Cheny
 ## X-Website: http://auctionator-addon.com
 ## X-Localizations: enUS, deDE, ruRU, svSE, frFR, esES
 ## Notes: A lightweight addon that makes it easy and fast to buy, sell and manage auctions

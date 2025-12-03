@@ -1,6 +1,6 @@
 
 AuctionatorVersion = "???";		-- set from toc upon loading
-AuctionatorAuthor  = "Zirco";
+AuctionatorAuthor  = "Zirco & Cheny";
 
 local AuctionatorLoaded = false;
 local AuctionatorInited = false;
