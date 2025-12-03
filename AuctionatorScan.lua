@@ -992,6 +992,10 @@ ATR_FS_ANALYZING	= 2;
 ATR_FS_CLEANING_UP	= 3;
 
 gAtr_FullScanState = ATR_FS_NULL;
+gAtr_FullScan_CurrentPage = 0;
+gAtr_FullScan_TotalPages = 0;
+gAtr_FullScan_AllData = {};
+gAtr_FullScan_StartTime = 0;
 
 
 -----------------------------------------
@@ -1030,8 +1034,14 @@ function Atr_FullScanStart()
 
 		gNumAdded = 0;
 		gNumUpdated = 0;
+		gAtr_FullScan_CurrentPage = 0;
+		gAtr_FullScan_TotalPages = 0;
+		gAtr_FullScan_AllData = {}; -- Acumular datos de todas las páginas
+		gAtr_FullScan_StartTime = time();
 
 		QueryAuctionItems ("", nil, nil, 0, 0, 0, 0, 0, 0, true);
+		
+		zc.msg_atr("Iniciando escaneo completo...");
 	end
 
 end
@@ -1103,49 +1113,97 @@ end
 
 function Atr_FullScanAnalyze()
 
-	gAtr_FullScanState = ATR_FS_ANALYZING;
-
-	Atr_FullScanStatus:SetText (ZT("Processing"));
-	
-
 	local numBatchAuctions, totalAuctions = GetNumAuctionItems("list");
 
-	zc.md ("FULL SCAN:"..numBatchAuctions.." out of  "..totalAuctions)
+	-- Calcular total de páginas en la primera consulta
+	if (gAtr_FullScan_CurrentPage == 0) then
+		gAtr_FullScan_TotalPages = math.ceil(totalAuctions / 50); -- 50 items por página
+		local estimatedTime = math.ceil(gAtr_FullScan_TotalPages * 0.5); -- ~0.5 segundos por página
+		zc.msg_atr("|cff00ff00Escaneo iniciado:|r "..totalAuctions.." subastas en "..gAtr_FullScan_TotalPages.." páginas (~"..estimatedTime.."s)");
+	end
+	
+	-- Verificar si recibimos datos
+	if (numBatchAuctions == 0) then
+		-- Ir directo al procesamiento
+		gAtr_FullScan_CurrentPage = gAtr_FullScan_TotalPages;
+	end
+
+	-- Acumular datos de esta página
+	for x = 1, numBatchAuctions do
+		local name, texture, count, quality, canUse, level, minBid, minIncrement, buyoutPrice = GetAuctionItemInfo("list", x);
+		if (name ~= nil and buyoutPrice ~= nil) then
+			table.insert(gAtr_FullScan_AllData, {name=name, count=count, quality=quality, buyoutPrice=buyoutPrice});
+		end
+	end
+
+	gAtr_FullScan_CurrentPage = gAtr_FullScan_CurrentPage + 1;
+	
+	-- Calcular progreso y tiempo
+	local progress = math.floor((gAtr_FullScan_CurrentPage / gAtr_FullScan_TotalPages) * 100);
+	local elapsed = time() - gAtr_FullScan_StartTime;
+	local remaining = 0;
+	if (gAtr_FullScan_CurrentPage > 0 and gAtr_FullScan_CurrentPage < gAtr_FullScan_TotalPages) then
+		local timePerPage = elapsed / gAtr_FullScan_CurrentPage;
+		remaining = math.ceil((gAtr_FullScan_TotalPages - gAtr_FullScan_CurrentPage) * timePerPage);
+	end
+	
+	local statusText = ZT("Scanning").." "..progress.."%";
+	if (remaining > 0) then
+		statusText = statusText.." (~"..remaining.."s)";
+	end
+	Atr_FullScanStatus:SetText(statusText);
+
+	-- Si hay más páginas, consultar la siguiente
+	if (gAtr_FullScan_CurrentPage < gAtr_FullScan_TotalPages and numBatchAuctions > 0) then
+		gAtr_FullScanState = ATR_FS_STARTED;
+		QueryAuctionItems ("", nil, nil, 0, 0, 0, gAtr_FullScan_CurrentPage, 0, 0, true);
+		return;
+	end
+
+	-- Todas las páginas escaneadas, procesar datos
+	gAtr_FullScanState = ATR_FS_ANALYZING;
+	Atr_FullScanStatus:SetText (ZT("Processing"));
+	
+	local scanTime = time() - gAtr_FullScan_StartTime;
+	zc.msg_atr("|cff00ff00Escaneo completado:|r "..#gAtr_FullScan_AllData.." items en "..scanTime.." segundos. Procesando datos...");
 
 	local lowprices = {};
 	local x;
 	
 	local qualities = {};
 	
-	if (numBatchAuctions > 0) then
+	local totalItems = #gAtr_FullScan_AllData;
+	
+	if (totalItems > 0) then
 
-		for x = 1, numBatchAuctions do
+		for x = 1, totalItems do
 
-			local name, texture, count, quality, canUse, level, minBid, minIncrement, buyoutPrice = GetAuctionItemInfo("list", x);
+			local itemData = gAtr_FullScan_AllData[x];
+			local name = itemData.name;
+			local count = itemData.count;
+			local quality = itemData.quality;
+			local buyoutPrice = itemData.buyoutPrice;
 
 			qualities[name] = quality;
 			
-			if (name ~= nil and buyoutPrice ~= nil) then
+			local itemPrice = math.floor (buyoutPrice / count);
 			
-				local itemPrice = math.floor (buyoutPrice / count);
-			
-				if (itemPrice > 0) then
-					if (not lowprices[name]) then
-						lowprices[name] = {BIGNUM,BIGNUM,BIGNUM};		-- one extra for later
-					end
-					
-					Atr_AddToLowPrices (lowprices[name], itemPrice);
+			if (itemPrice > 0) then
+				if (not lowprices[name]) then
+					lowprices[name] = {BIGNUM,BIGNUM,BIGNUM};		-- one extra for later
 				end
+				
+				Atr_AddToLowPrices (lowprices[name], itemPrice);
 			end
 
 			if (x % 100 == 0) then
-				Atr_FullScanStatus:SetText (ZT("Processing").." ("..x..")");
+				Atr_FullScanStatus:SetText (ZT("Processing").." ("..x.." / "..totalItems..")");
 			end
 		end
 	end
 
 	local numEachQual = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-	local totalItems = 0;
+	local totalUniqueItems = 0;
 	local numRemoved = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	
 	for name,prices in pairs (lowprices) do
@@ -1157,7 +1215,7 @@ function Atr_FullScanAnalyze()
 			local qx = qualities[name] + 1;
 			
 			numEachQual[qx]	= numEachQual[qx] + 1;
-			totalItems		= totalItems + 1;
+			totalUniqueItems		= totalUniqueItems + 1;
 			
 			if (qx < AUCTIONATOR_SCAN_MINLEVEL and gAtr_ScanDB[name]) then
 				numRemoved[qx] = numRemoved[qx] + 1;
@@ -1178,22 +1236,18 @@ function Atr_FullScanAnalyze()
 		end
 	end
 
-	gScanDetails.numBatchAuctions		= numBatchAuctions;
-	gScanDetails.totalItems				= totalItems;
+	gScanDetails.numBatchAuctions		= #gAtr_FullScan_AllData;
+	gScanDetails.totalItems				= totalUniqueItems;
 	gScanDetails.numEachQual			= numEachQual;
 	gScanDetails.numRemoved				= numRemoved;
 	gScanDetails.gNumAdded				= gNumAdded;
 	gScanDetails.gNumUpdated			= gNumUpdated;
 
 
-	if (Atr_PrintBargains and Atr_CheckForBargain and numBatchAuctions > 0) then
-
-		for x = 1, numBatchAuctions do
-			Atr_CheckForBargain (x);
-		end
-		
-		Atr_PrintBargains();
-	end
+	-- Bargains check comentado ya que requeriría mantener referencias a los items de auction
+	-- if (Atr_PrintBargains and Atr_CheckForBargain and totalItems > 0) then
+	-- 	Atr_PrintBargains();
+	-- end
 	
 	gAtr_FullScanState = ATR_FS_CLEANING_UP;
 
@@ -1205,10 +1259,10 @@ function Atr_FullScanAnalyze()
 	Atr_FullScanDone:Enable();
 	Atr_FullScanStatus:SetText ("");
 	
-	Atr_FSR_scanned_count:SetText	(numBatchAuctions);
+	Atr_FSR_scanned_count:SetText	(#gAtr_FullScan_AllData);
 	Atr_FSR_added_count:SetText		(gNumAdded);
 	Atr_FSR_updated_count:SetText	(gNumUpdated);
-	Atr_FSR_ignored_count:SetText	(totalItems - (gNumAdded + gNumUpdated));
+	Atr_FSR_ignored_count:SetText	(totalUniqueItems - (gNumAdded + gNumUpdated));
 	
 	Atr_FullScanHTML:Hide();
 	Atr_FullScanResults:Show();
@@ -1222,6 +1276,7 @@ function Atr_FullScanAnalyze()
 	Atr_ClearBrowseListings();
 	
 	lowprices = {};
+	gAtr_FullScan_AllData = {};
 	collectgarbage ("collect");
 end
 
@@ -1316,6 +1371,13 @@ function Atr_FullScanFrameIdle()
 			PlaySound("AuctionWindowClose");
 			
 			gAtr_FullScanState = ATR_FS_NULL;
+			
+			-- Resetear variables de escaneo
+			gAtr_FullScan_CurrentPage = 0;
+			gAtr_FullScan_TotalPages = 0;
+			
+			-- Actualizar el frame para habilitar el botón
+			Atr_UpdateFullScanFrame();
 		end
 	
 	end

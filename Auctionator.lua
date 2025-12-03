@@ -50,6 +50,7 @@ local auctionator_savedvars_defaults =
 	["_2000"]				= 100;
 	["_500"]				= 5;
 	["STARTING_DISCOUNT"]	= 5;	-- PERCENT
+	["SHARE_SCAN_DATA"]		= 1;	-- 1 = compartir entre facciones del mismo reino, 0 = separado por facción
 	};
 
 
@@ -408,6 +409,25 @@ local function Atr_SlashCmdFunction(msg)
 		collectgarbage  ("collect");
 		
 		zc.msg_atr ("memory usage: "..Atr_GetAuctionatorMemString());
+	
+	elseif (cmd == "share") then
+		if (AUCTIONATOR_SAVEDVARS == nil) then
+			AUCTIONATOR_SAVEDVARS = zc.CopyDeep(auctionator_savedvars_defaults);
+		end
+		
+		if (param1 == "on" or param1 == "1") then
+			AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA = 1;
+			zc.msg_atr("|cff00ff00Compartir datos activado:|r Los datos de escaneo ahora se comparten entre Horda y Alianza del mismo reino.");
+			zc.msg_atr("Ejecuta |cffffd700/reload|r para aplicar los cambios.");
+		elseif (param1 == "off" or param1 == "0") then
+			AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA = 0;
+			zc.msg_atr("|cffffff00Compartir datos desactivado:|r Los datos de escaneo se guardan por separado para cada facción.");
+			zc.msg_atr("Ejecuta |cffffd700/reload|r para aplicar los cambios.");
+		else
+			local status = AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA == 1 and "|cff00ff00ACTIVADO|r" or "|cffff0000DESACTIVADO|r";
+			zc.msg_atr("Compartir datos entre facciones: "..status);
+			zc.msg_atr("Usa |cffffd700/atr share on|r o |cffffd700/atr share off|r para cambiar.");
+		end
 
 	elseif (Atr_HandleDevCommands and Atr_HandleDevCommands (cmd, param1, param2)) then
 		-- do nothing
@@ -422,7 +442,16 @@ end
 
 function Atr_InitScanDB()
 
-	local realm_Faction = GetRealmName().."_"..UnitFactionGroup ("player");
+	local realmName = GetRealmName();
+	local faction = UnitFactionGroup("player");
+	local realm_Faction = realmName.."_"..faction;
+	
+	-- Determinar qué clave usar basado en la configuración
+	local dbKey = realm_Faction; -- Por defecto, separado por facción
+	
+	if (AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA == 1) then
+		dbKey = realmName; -- Compartir entre todas las facciones del reino
+	end
 
 	if (AUCTIONATOR_PRICE_DATABASE and AUCTIONATOR_PRICE_DATABASE["__dbversion"] == nil) then	-- see if we need to migrate
 	
@@ -441,11 +470,29 @@ function Atr_InitScanDB()
 		AUCTIONATOR_PRICE_DATABASE["__dbversion"] = 2;
 	end
 	
-	if (AUCTIONATOR_PRICE_DATABASE[realm_Faction] == nil) then
-		AUCTIONATOR_PRICE_DATABASE[realm_Faction] = {};
+	-- Si estamos compartiendo datos y no existe la clave del reino, pero existe la de facción, migrar
+	if (AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA == 1) then
+		if (AUCTIONATOR_PRICE_DATABASE[dbKey] == nil) then
+			-- Buscar datos de cualquier facción del mismo reino
+			local horde_key = realmName.."_Horde";
+			local alliance_key = realmName.."_Alliance";
+			
+			if (AUCTIONATOR_PRICE_DATABASE[horde_key]) then
+				AUCTIONATOR_PRICE_DATABASE[dbKey] = AUCTIONATOR_PRICE_DATABASE[horde_key];
+			elseif (AUCTIONATOR_PRICE_DATABASE[alliance_key]) then
+				AUCTIONATOR_PRICE_DATABASE[dbKey] = AUCTIONATOR_PRICE_DATABASE[alliance_key];
+			else
+				AUCTIONATOR_PRICE_DATABASE[dbKey] = {};
+			end
+		end
+	else
+		-- Modo separado por facción
+		if (AUCTIONATOR_PRICE_DATABASE[dbKey] == nil) then
+			AUCTIONATOR_PRICE_DATABASE[dbKey] = {};
+		end
 	end
 
-	gAtr_ScanDB = AUCTIONATOR_PRICE_DATABASE[realm_Faction];
+	gAtr_ScanDB = AUCTIONATOR_PRICE_DATABASE[dbKey];
 
 end
 

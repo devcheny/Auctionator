@@ -104,6 +104,17 @@ function Atr_BasicOptionsFrame_Save()
 		if (Atr_RB_M:GetChecked())	then	AUCTIONATOR_DEF_DURATION = "M"; end;
 		if (Atr_RB_L:GetChecked())	then	AUCTIONATOR_DEF_DURATION = "L"; end;
 	end
+	
+	-- Guardar opción de compartir DB
+	if (AUCTIONATOR_SAVEDVARS == nil) then
+		AUCTIONATOR_SAVEDVARS = {};
+	end
+	local oldShareValue = AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA;
+	AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA = zc.BoolToNum(AuctionatorOption_Share_DB_CB:GetChecked());
+	
+	if (oldShareValue ~= AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA) then
+		zc.msg_atr("|cffff9900Compartir datos:|r Ejecuta |cffffd700/reload|r para aplicar los cambios.");
+	end
 
 	local newValues = zc.msg_str (AUCTIONATOR_ENABLE_ALT, AUCTIONATOR_OPEN_ALL_BAGS, AUCTIONATOR_SHOW_ST_PRICE, AUCTIONATOR_DEFTAB, AUCTIONATOR_DEF_DURATION);
 
@@ -131,6 +142,15 @@ function Atr_SetupBasicOptionsFrame()
 	AuctionatorOption_Def_Duration_CB:SetChecked (AUCTIONATOR_DEF_DURATION == "S" or AUCTIONATOR_DEF_DURATION == "M" or AUCTIONATOR_DEF_DURATION == "L");
 
 	Atr_SetDurationOptionRB (AUCTIONATOR_DEF_DURATION);
+	
+	-- Configurar opción de compartir DB
+	if (AUCTIONATOR_SAVEDVARS == nil) then
+		AUCTIONATOR_SAVEDVARS = {};
+	end
+	if (AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA == nil) then
+		AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA = 1; -- Por defecto activado
+	end
+	AuctionatorOption_Share_DB_CB:SetChecked(zc.NumToBool(AUCTIONATOR_SAVEDVARS.SHARE_SCAN_DATA));
 
 end
 
@@ -635,6 +655,10 @@ function Atr_ShowOptionTooltip (elem)
 
 	if (zc.StringContains (name, "Def_Duration")) then
 		text = ZT("If this option is checked, every time you initiate a new auction the auction duration will be reset to the default duration you've selected.");
+	end
+	
+	if (zc.StringContains (name, "Share_DB")) then
+		text = ZT("If this option is checked, scan data will be shared between Horde and Alliance characters on the same realm. Requires /reload to take effect.");
 	end
 
 	if (text) then

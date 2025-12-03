@@ -145,9 +145,16 @@
 				</Scripts>
 			</Frame>
 
+			<Frame name="AuctionatorOption_Share_DB" inherits="Atr_SingleOptionTemplate">
+				<Anchors><Anchor point="TOP"><Offset><AbsDimension y="-220"/></Offset></Anchor></Anchors>
+				<Scripts>
+					<OnLoad>	AuctionatorOption_Share_DB_CB_Text:SetText (ZT("Share scan data between factions"));	</OnLoad>
+				</Scripts>
+			</Frame>
+
 			<Frame name="AuctionatorOption_Durations" hidden="true">
 				<Size><AbsDimension x="250" y="25"/>	</Size>
-				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="40" y="-220"/></Offset></Anchor></Anchors>
+				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="40" y="-255"/></Offset></Anchor></Anchors>
 				<Frames>
 					<CheckButton name="Atr_RB_S" inherits="UIRadioButtonTemplate">
 						<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="0"/></Offset></Anchor></Anchors>
@@ -175,7 +182,7 @@
 
 			<Frame name="AuctionatorOption_Deftab_Text">
 				<Size><AbsDimension x="180" y="20" /></Size>		
-				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="30" y="-261"/></Offset></Anchor></Anchors>
+				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="30" y="-296"/></Offset></Anchor></Anchors>
 				<Layers>
 					<Layer level="ARTWORK">
 						<FontString name="$parent_Text" inherits="GameFontHighlight" text="Default Auctionator tab">
@@ -190,7 +197,7 @@
 			</Frame>
 
 			<Frame name="AuctionatorOption_Deftab" inherits="UIDropDownMenuTemplate">
-				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="165" y="-255"/></Offset></Anchor></Anchors>
+				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="165" y="-290"/></Offset></Anchor></Anchors>
 				<Scripts>
 					<OnLoad>
 						UIDropDownMenu_Initialize(self, AuctionatorOption_Deftab_Initialize);
