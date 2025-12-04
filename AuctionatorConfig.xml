@@ -606,6 +606,41 @@
 					<OnLeave>	GameTooltip:Hide();		</OnLeave>
 				</Scripts>
 			</Frame>
+
+			<!-- Selector de delay de página para escaneo -->
+			<Frame>
+				<Size><AbsDimension x="220" y="22" /></Size>
+				<Anchors><Anchor point="TOPLEFT"><Offset x="15" y="-100"/></Anchor></Anchors>
+				<Layers>
+					<Layer level="BACKGROUND">
+						<FontString inherits="GameFontNormal" text="Delay entre páginas (segundos):"/>
+					</Layer>
+				</Layers>
+			</Frame>
+
+			<Slider name="Atr_scanDelaySlider" inherits="OptionsSliderTemplate" minValue="0.3" maxValue="2.0" valueStep="0.1">
+				<Size><AbsDimension x="260" y="17"/></Size>
+				<Anchors><Anchor point="TOPLEFT"><Offset x="30" y="-120"/></Anchor></Anchors>
+				<Scripts>
+					<OnShow>
+						Atr_scanDelaySliderLow:SetText("0.3s");
+						Atr_scanDelaySliderHigh:SetText("2.0s");
+					</OnShow>
+					<OnValueChanged>
+						Atr_scanDelaySlider_OnValueChanged(self, value);
+					</OnValueChanged>
+				</Scripts>
+			</Slider>
+
+			<Frame>
+				<Size><AbsDimension x="80" y="20" /></Size>
+				<Anchors><Anchor point="LEFT" relativeTo="Atr_scanDelaySlider" relativePoint="RIGHT"><Offset x="10" y="0"/></Anchor></Anchors>
+				<Layers>
+					<Layer level="BACKGROUND">
+						<FontString name="Atr_scanDelayValue" inherits="GameFontHighlight" text="0.4s"/>
+					</Layer>
+				</Layers>
+			</Frame>
 		</Frames>
 		
 	</Frame>

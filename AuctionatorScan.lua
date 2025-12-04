@@ -1063,6 +1063,11 @@ function Atr_FullScanStart()
 	gAtr_FullScan_LastQueryTime = time();
 	gAtr_FullScan_NextQueryTime = time();
 
+	-- Aplicar delay configurado por el usuario si existe
+	if (AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY) then
+		gAtr_FullScan_PageDelay = AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY;
+	end
+
 	zc.msg_atr("|cff00ff00Escaneo iniciado con paginación inteligente|r");
 	
 	QueryAuctionItems ("", nil, nil, 0, 0, 0, 0, nil, nil);
@@ -1193,7 +1198,11 @@ function Atr_FullScanAnalyze()
 	for x = 1, numBatchAuctions do
 		local name, texture, count, quality, canUse, level, minBid, minIncrement, buyoutPrice = GetAuctionItemInfo("list", x);
 		if (name ~= nil and buyoutPrice ~= nil) then
-			table.insert(gAtr_FullScan_AllData, {name=name, count=count, quality=quality, buyoutPrice=buyoutPrice});
+			-- Filtrar por nivel de calidad mínimo: no acumular objetos por debajo del umbral
+			local qx = (quality or 0) + 1;
+			if (qx >= AUCTIONATOR_SCAN_MINLEVEL) then
+				table.insert(gAtr_FullScan_AllData, {name=name, count=count, quality=quality, buyoutPrice=buyoutPrice});
+			end
 		end
 	end
 
@@ -1504,7 +1513,11 @@ function Atr_FullScanFrameIdle()
 				gAtr_FullScan_LastQueryTime = currentTime;
 				QueryAuctionItems ("", nil, nil, 0, 0, 0, gAtr_FullScan_CurrentPage, nil, nil);
 			else
-				-- Si no podemos consultar aún, esperar un poco más
+				-- Si no podemos consultar aún, esperar un poco más y avisar si se repite
+				if (gAtr_FullScan_ThrottleWarned ~= true) then
+					zc.msg_atr("|cffff8800Se detecta limitación del servidor|r. Aumenta el delay en Opciones > Scanning si vuelve a ocurrir.");
+					gAtr_FullScan_ThrottleWarned = true;
+				end
 				gAtr_FullScan_NextQueryTime = currentTime + 0.5;
 			end
 		end

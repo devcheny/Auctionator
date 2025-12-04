@@ -680,22 +680,48 @@ function Atr_SetupScanningConfigFrame ()
 
 	UIDropDownMenu_Initialize(Atr_scanLevelDD, Atr_scanLevelDD_Initialize);
 	UIDropDownMenu_SetSelectedValue(Atr_scanLevelDD, AUCTIONATOR_SCAN_MINLEVEL);
+
+	-- Inicializar slider de delay de página
+	if (AUCTIONATOR_SAVEDVARS == nil) then AUCTIONATOR_SAVEDVARS = {}; end
+	if (AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY == nil) then
+		AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY = 0.4; -- valor por defecto
+	end
+	Atr_scanDelaySliderLow:SetText("0.3s");
+	Atr_scanDelaySliderHigh:SetText("2.0s");
+	Atr_scanDelaySlider:SetMinMaxValues(0.3, 2.0);
+	Atr_scanDelaySlider:SetValueStep(0.1);
+	Atr_scanDelaySlider:SetValue(AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY);
+	Atr_scanDelayValue:SetText(string.format("%.1fs", AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY));
 end
 
 -----------------------------------------
 
 function Atr_ScanningOptionsFrame_Save()
 
-	local origValues = zc.msg_str (AUCTIONATOR_SCAN_MINLEVEL);
+    local origValues = zc.msg_str (AUCTIONATOR_SCAN_MINLEVEL, AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY or 0);
 
 	AUCTIONATOR_SCAN_MINLEVEL = UIDropDownMenu_GetSelectedValue(Atr_scanLevelDD);
 
-	local newValues = zc.msg_str (AUCTIONATOR_SCAN_MINLEVEL);
+	-- Guardar delay del escaneo
+	if (AUCTIONATOR_SAVEDVARS == nil) then AUCTIONATOR_SAVEDVARS = {}; end
+	local newDelay = Atr_scanDelaySlider:GetValue();
+	AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY = newDelay;
+	Atr_scanDelayValue:SetText(string.format("%.1fs", newDelay));
+
+    local newValues = zc.msg_str (AUCTIONATOR_SCAN_MINLEVEL, AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY);
 
 	if (origValues ~= newValues) then
 		zc.msg_atr (ZT("scanning options saved"));
 	end
 	
+end
+
+-----------------------------------------
+
+function Atr_scanDelaySlider_OnValueChanged(self, value)
+	value = math.max(0.3, math.min(2.0, value));
+	Atr_scanDelayValue:SetText(string.format("%.1fs", value));
+	-- No guardamos aquí; se guarda en Save
 end
 
 -----------------------------------------
