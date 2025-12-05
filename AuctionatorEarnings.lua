@@ -137,6 +137,19 @@ function Atr_UpdateEarningsDisplay()
 		return;
 	end
 	
+	-- Verificar que la casa de subastas esté abierta
+	if not AuctionFrame or not AuctionFrame:IsShown() then
+		Atr_Earnings_Frame:Hide();
+		return;
+	end
+	
+	-- Verificar si estamos en la pestaña de Auctions (index 3)
+	local selectedTab = PanelTemplates_GetSelectedTab(AuctionFrame);
+	if selectedTab ~= 3 then
+		Atr_Earnings_Frame:Hide();
+		return;
+	end
+	
 	-- Forzar actualización de la lista de subastas
 	local shortText = Atr_GetEarningsShortText();
 	
@@ -148,11 +161,21 @@ end
 -- Hook para actualizar cuando cambian las subastas
 -----------------------------------------
 local function OnAuctionOwnedListUpdate()
-	-- Verificar si estamos en la pestaña de Auctions (index 3)
+	-- Solo actualizar si la casa de subastas está abierta
 	if AuctionFrame and AuctionFrame:IsShown() then
 		local selectedTab = PanelTemplates_GetSelectedTab(AuctionFrame);
 		if selectedTab == 3 then
 			Atr_UpdateEarningsDisplay();
+		else
+			-- Ocultar si no estamos en la pestaña correcta
+			if Atr_Earnings_Frame then
+				Atr_Earnings_Frame:Hide();
+			end
+		end
+	else
+		-- Ocultar si la casa de subastas no está abierta
+		if Atr_Earnings_Frame then
+			Atr_Earnings_Frame:Hide();
 		end
 	end
 end
@@ -161,12 +184,18 @@ end
 local earningsFrame = CreateFrame("Frame");
 earningsFrame:RegisterEvent("AUCTION_OWNED_LIST_UPDATE");
 earningsFrame:RegisterEvent("AUCTION_HOUSE_SHOW");
+earningsFrame:RegisterEvent("AUCTION_HOUSE_CLOSED");
 earningsFrame:SetScript("OnEvent", function(self, event, ...)
 	if (event == "AUCTION_OWNED_LIST_UPDATE") then
 		OnAuctionOwnedListUpdate();
 	elseif (event == "AUCTION_HOUSE_SHOW") then
 		-- Actualizar cuando se abre la casa de subastas
 		OnAuctionOwnedListUpdate();
+	elseif (event == "AUCTION_HOUSE_CLOSED") then
+		-- Ocultar el frame cuando se cierra la casa de subastas
+		if Atr_Earnings_Frame then
+			Atr_Earnings_Frame:Hide();
+		end
 	end
 end);
 
