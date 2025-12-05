@@ -641,6 +641,41 @@
 					</Layer>
 				</Layers>
 			</Frame>
+
+			<!-- Margen de beneficio para crafteo -->
+			<Frame>
+				<Size><AbsDimension x="280" y="22" /></Size>
+				<Anchors><Anchor point="TOPLEFT"><Offset x="15" y="-155"/></Anchor></Anchors>
+				<Layers>
+					<Layer level="BACKGROUND">
+						<FontString inherits="GameFontNormal" text="Margen de beneficio para crafteo (%):"/>
+					</Layer>
+				</Layers>
+			</Frame>
+
+			<Slider name="Atr_craftProfitSlider" inherits="OptionsSliderTemplate" minValue="5" maxValue="100" valueStep="5">
+				<Size><AbsDimension x="260" y="17"/></Size>
+				<Anchors><Anchor point="TOPLEFT"><Offset x="30" y="-175"/></Anchor></Anchors>
+				<Scripts>
+					<OnShow>
+						Atr_craftProfitSliderLow:SetText("5%");
+						Atr_craftProfitSliderHigh:SetText("100%");
+					</OnShow>
+					<OnValueChanged>
+						Atr_craftProfitSlider_OnValueChanged(self, value);
+					</OnValueChanged>
+				</Scripts>
+			</Slider>
+
+			<Frame>
+				<Size><AbsDimension x="50" y="20" /></Size>
+				<Anchors><Anchor point="LEFT" relativeTo="Atr_craftProfitSlider" relativePoint="RIGHT"><Offset x="10" y="0"/></Anchor></Anchors>
+				<Layers>
+					<Layer level="BACKGROUND">
+						<FontString name="Atr_craftProfitValue" inherits="GameFontHighlight" text="20%"/>
+					</Layer>
+				</Layers>
+			</Frame>
 		</Frames>
 		
 	</Frame>

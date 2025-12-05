@@ -916,6 +916,156 @@ end
 
 -----------------------------------------
 
+-- Variables globales para el tooltip de crafteo
+local AtrCraftingTooltip = nil;
+
+-- Hooks originales del GameTooltip (simplificado)
+-- local auctionator_orig_GameTooltip_OnHide = nil;
+
+-- Función para hook del GameTooltip cuando se oculta (ya no se usa)
+-- function auctionator_GameTooltip_OnHide(self)
+
+-- Función para configurar los hooks del GameTooltip (ya no se usa)
+-- function Atr_SetupTooltipHooks()
+
+function Atr_ShowCraftingInfo(tip, skill, isReagent)
+	-- Solo mostrar para el item principal de crafteo, no para los reagentes
+	if not skill or skill == 0 or isReagent then
+		return;
+	end
+	
+	local materialCost, materialDetails = Atr_CalculateMaterialCost(skill);
+	if not materialCost then
+		return;
+	end
+	
+	local numMade = GetTradeSkillNumMade(skill) or 1;
+	local suggestedPrice = Atr_CalculateSuggestedPrice(materialCost, numMade);
+	
+	-- Añadir información de crafteo directamente al tooltip principal
+	tip:AddLine(" ");
+	tip:AddLine("|cFFFFAA00--- Información de Crafteo ---|r");
+	
+	-- Mostrar costo total de materiales
+	tip:AddDoubleLine("|cFFFF8800Costo materiales:|r", "|cFFFFFFFF"..zc.priceToMoneyString(materialCost));
+	
+	-- Si se producen múltiples items, mostrar costo por unidad
+	if numMade > 1 then
+		local costPerUnit = materialCost / numMade;
+		tip:AddDoubleLine("|cFFFF8800Costo por unidad:|r", "|cFFFFFFFF"..zc.priceToMoneyString(costPerUnit));
+	end
+	
+	-- Mostrar precio sugerido
+	if suggestedPrice then
+		-- Para encantamientos, obtener el nombre del pergamino
+		local itemLink = GetTradeSkillItemLink(skill);
+		local itemName = nil;
+		if itemLink then
+			itemName = GetItemInfo(itemLink);
+		end
+		
+		local isEnchanting = Atr_IsEnchantingRecipe(skill);
+		if isEnchanting and itemName then
+			local scrollName = Atr_GetEnchantScrollName(itemName);
+			if scrollName then
+				-- Obtener precio actual del pergamino en subasta
+				local currentScrollPrice = Atr_GetAuctionPrice(scrollName);
+				if currentScrollPrice and currentScrollPrice > 0 then
+					tip:AddDoubleLine("|cFF88FF88Precio pergamino:|r", "|cFFFFFFFF"..zc.priceToMoneyString(currentScrollPrice));
+					
+					-- Mostrar comparación de beneficio
+					local potentialProfit = currentScrollPrice - (materialCost / numMade);
+					if potentialProfit > 0 then
+						tip:AddDoubleLine("|cFF00FF00Beneficio:|r", "|cFF00FF00+"..zc.priceToMoneyString(potentialProfit));
+					else
+						tip:AddDoubleLine("|cFFFF4444Pérdida:|r", "|cFFFF4444"..zc.priceToMoneyString(math.abs(potentialProfit)));
+					end
+				else
+					tip:AddDoubleLine("|cFF88FF88Precio sugerido:|r", "|cFF88FF88"..zc.priceToMoneyString(suggestedPrice));
+				end
+			end
+		else
+			tip:AddDoubleLine("|cFF88FF88Precio sugerido:|r", "|cFF88FF88"..zc.priceToMoneyString(suggestedPrice));
+		end
+	end
+	
+	-- Mostrar desglose de materiales
+	local showDetailedBreakdown = IsShiftKeyDown();
+	local maxMaterialsToShow = showDetailedBreakdown and #materialDetails or math.min(4, #materialDetails);
+	
+	if #materialDetails > 0 then
+		tip:AddLine(" ");
+		tip:AddLine("|cFFFFAA00Materiales:|r");
+		
+		for i = 1, maxMaterialsToShow do
+			local material = materialDetails[i];
+			if material and material.unitPrice > 0 then
+				local materialLine = string.format("|cFFAAAAAA%dx %s|r", material.quantity, material.name);
+				local priceLine = zc.priceToMoneyString(material.totalPrice);
+				tip:AddDoubleLine(materialLine, "|cFFFFFFFF"..priceLine);
+			end
+		end
+		
+		-- Mostrar indicador si hay más materiales
+		if not showDetailedBreakdown and #materialDetails > 4 then
+			tip:AddLine("|cFFAAAAAA... y "..(#materialDetails - 4).." más (Shift)|r");
+		elseif not showDetailedBreakdown then
+			tip:AddLine("|cFFAAAAAA(Shift para detalles)|r");
+		end
+	end
+	
+	-- IMPORTANTE: Forzar que el tooltip se redimensione para mostrar todo el contenido
+	if tip == GameTooltip then
+		-- Forzar recalculación del tamaño del tooltip
+		tip:Show();
+		
+		-- Verificar límites de pantalla después del redimensionado
+		local screenWidth = UIParent:GetWidth();
+		local screenHeight = UIParent:GetHeight();
+		
+		local tipLeft = tip:GetLeft() or 0;
+		local tipTop = tip:GetTop() or 0;
+		local tipWidth = tip:GetWidth() or 0;
+		local tipHeight = tip:GetHeight() or 0;
+		
+		-- Reposicionar si se sale de la pantalla
+		local needsRepositioning = false;
+		local newX, newY = tipLeft, tipTop;
+		
+		-- Verificar límite derecho
+		if tipLeft + tipWidth > screenWidth then
+			newX = screenWidth - tipWidth - 10;
+			needsRepositioning = true;
+		end
+		
+		-- Verificar límite izquierdo
+		if tipLeft < 0 then
+			newX = 10;
+			needsRepositioning = true;
+		end
+		
+		-- Verificar límite inferior
+		if tipTop - tipHeight < 0 then
+			newY = tipHeight + 10;
+			needsRepositioning = true;
+		end
+		
+		-- Verificar límite superior
+		if tipTop > screenHeight then
+			newY = screenHeight - 10;
+			needsRepositioning = true;
+		end
+		
+		-- Reposicionar si es necesario
+		if needsRepositioning then
+			tip:ClearAllPoints();
+			tip:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", newX, newY);
+		end
+	end
+end
+
+-----------------------------------------
+
 hooksecurefunc (GameTooltip, "SetBagItem",
 	function(tip, bag, slot)
 		local _, num = GetContainerItemInfo(bag, slot);
@@ -973,12 +1123,20 @@ hooksecurefunc (GameTooltip, "SetTradeSkillItem",
 	function (tip, skill, id)
 		local link = GetTradeSkillItemLink(skill);
 		local num  = GetTradeSkillNumMade(skill);
+		local isReagent = false;
+		
 		if id then
 			link = GetTradeSkillReagentItemLink(skill, id);
 			num = select (3, GetTradeSkillReagentInfo(skill, id));
+			isReagent = true;
 		end
 
 		ShowTipWithPricing (tip, link, num);
+		
+		-- Agregar información de crafteo solo para el item principal
+		if not isReagent then
+			Atr_ShowCraftingInfo(tip, skill, isReagent);
+		end
 	end
 );
 
@@ -1044,6 +1202,147 @@ hooksecurefunc (ItemRefTooltip, "SetHyperlink",
 		ShowTipWithPricing (tip, link);
 	end
 );
+
+-----------------------------------------
+-- Sistema de cálculo de costos de materiales para profesiones
+-----------------------------------------
+
+function Atr_CalculateMaterialCost(skill)
+	-- Calcular el costo total de los materiales para una receta
+	if not skill or skill == 0 then
+		return nil, {};
+	end
+	
+	local totalCost = 0;
+	local materialDetails = {};
+	local allMaterialsHavePrice = true;
+	
+	local numReagents = GetTradeSkillNumReagents(skill);
+	if not numReagents or numReagents == 0 then
+		return nil, {};
+	end
+	
+	for i = 1, numReagents do
+		local rname, _, rnum = GetTradeSkillReagentInfo(skill, i);
+		if rname and rnum then
+			local materialPrice = Atr_GetAuctionPrice(rname);
+			
+			if not materialPrice or materialPrice <= 0 then
+				-- Si no tenemos precio de subasta, intentar conseguir precio de vendor
+				local rlink = GetTradeSkillReagentItemLink(skill, i);
+				if rlink then
+					local _, _, _, _, _, _, _, _, _, _, itemVendorPrice = GetItemInfo(rlink);
+					materialPrice = itemVendorPrice or 0;
+				end
+			end
+			
+			if materialPrice and materialPrice > 0 then
+				local materialTotalCost = materialPrice * rnum;
+				totalCost = totalCost + materialTotalCost;
+				
+				table.insert(materialDetails, {
+					name = rname,
+					quantity = rnum,
+					unitPrice = materialPrice,
+					totalPrice = materialTotalCost
+				});
+			else
+				allMaterialsHavePrice = false;
+				table.insert(materialDetails, {
+					name = rname,
+					quantity = rnum,
+					unitPrice = 0,
+					totalPrice = 0
+				});
+			end
+		end
+	end
+	
+	if not allMaterialsHavePrice then
+		return nil, materialDetails;
+	end
+	
+	return totalCost, materialDetails;
+end
+
+-----------------------------------------
+
+function Atr_CalculateSuggestedPrice(materialCost, numMade)
+	-- Calcular precio sugerido basado en costo de materiales
+	if not materialCost or materialCost <= 0 or not numMade or numMade <= 0 then
+		return nil;
+	end
+	
+	-- Obtener margen de beneficio configurado (por defecto 20%)
+	local profitMargin = 0.20;
+	if AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN then
+		profitMargin = AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN / 100;
+	end
+	
+	-- Calcular costo por unidad producida
+	local costPerUnit = materialCost / numMade;
+	
+	-- Aplicar margen de beneficio
+	local suggestedPrice = costPerUnit * (1 + profitMargin);
+	
+	-- Redondear a un valor razonable
+	suggestedPrice = math.ceil(suggestedPrice);
+	
+	return suggestedPrice;
+end
+
+-----------------------------------------
+
+function Atr_GetEnchantScrollName(enchantName)
+	-- Convertir nombre de encantamiento a nombre de pergamino
+	-- Esta función mapea nombres de encantamientos a sus pergaminos correspondientes
+	
+	if not enchantName then
+		return nil;
+	end
+	
+	-- Tabla de mapeo de encantamientos conocidos a pergaminos
+	-- Se puede expandir según sea necesario
+	local enchantScrollMap = {
+		-- Ejemplos para encantamientos comunes
+		["Enchant Weapon - Minor Beastslayer"] = "Pergamino de Encantamiento de arma: Verdugo de bestias menor",
+		["Enchant Bracer - Minor Health"] = "Pergamino de Encantamiento de brazal: Salud menor",
+		["Enchant Chest - Minor Health"] = "Pergamino de Encantamiento de pecho: Salud menor",
+		["Enchant Weapon - Minor Striking"] = "Pergamino de Encantamiento de arma: Golpe menor",
+		["Enchant 2H Weapon - Minor Impact"] = "Pergamino de Encantamiento de arma de 2 manos: Impacto menor",
+		["Enchant Bracer - Minor Deflection"] = "Pergamino de Encantamiento de brazal: Desviación menor",
+		["Enchant Chest - Minor Absorption"] = "Pergamino de Encantamiento de pecho: Absorción menor",
+		-- Agregar más mapeos según sea necesario
+	};
+	
+	-- Buscar mapeo directo
+	if enchantScrollMap[enchantName] then
+		return enchantScrollMap[enchantName];
+	end
+	
+	-- Si no hay mapeo directo, intentar generar el nombre del pergamino
+	-- Patrón común: "Pergamino de " + nombre del encantamiento
+	local scrollName = "Pergamino de " .. enchantName;
+	
+	return scrollName;
+end
+
+-----------------------------------------
+
+function Atr_IsEnchantingRecipe(skill)
+	-- Verificar si una receta es de encantamiento
+	if not skill then
+		return false;
+	end
+	
+	-- Verificar si estamos en la ventana de encantamiento
+	local tradeskillTitle = GetTradeSkillLine();
+	if tradeskillTitle and string.find(string.lower(tradeskillTitle), "encant") then
+		return true;
+	end
+	
+	return false;
+end
 
 
 

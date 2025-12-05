@@ -678,37 +678,96 @@ end
 
 function Atr_SetupScanningConfigFrame ()
 
+	-- Configurar dropdown principal (siempre existe)
 	UIDropDownMenu_Initialize(Atr_scanLevelDD, Atr_scanLevelDD_Initialize);
 	UIDropDownMenu_SetSelectedValue(Atr_scanLevelDD, AUCTIONATOR_SCAN_MINLEVEL);
 
-	-- Inicializar slider de delay de página
+	-- Inicializar variables guardadas
 	if (AUCTIONATOR_SAVEDVARS == nil) then AUCTIONATOR_SAVEDVARS = {}; end
+	
+	-- Configurar valores por defecto
+	if (AUCTIONATOR_SAVEDVARS.MIN_SCAN_QUALITY == nil) then
+		AUCTIONATOR_SAVEDVARS.MIN_SCAN_QUALITY = 2; -- Poco común por defecto
+	end
 	if (AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY == nil) then
 		AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY = 0.4; -- valor por defecto
 	end
-	Atr_scanDelaySliderLow:SetText("0.3s");
-	Atr_scanDelaySliderHigh:SetText("2.0s");
-	Atr_scanDelaySlider:SetMinMaxValues(0.3, 2.0);
-	Atr_scanDelaySlider:SetValueStep(0.1);
-	Atr_scanDelaySlider:SetValue(AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY);
-	Atr_scanDelayValue:SetText(string.format("%.1fs", AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY));
+	if (AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN == nil) then
+		AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN = 20; -- 20% por defecto
+	end
+	
+	-- Configurar selector de rareza mínima de inicio (solo si existe el frame)
+	if (Atr_scanMinQualityDD and Atr_scanMinQualityDD_Initialize) then
+		UIDropDownMenu_Initialize(Atr_scanMinQualityDD, Atr_scanMinQualityDD_Initialize);
+		UIDropDownMenu_SetSelectedValue(Atr_scanMinQualityDD, AUCTIONATOR_SAVEDVARS.MIN_SCAN_QUALITY);
+	end
+
+	-- Configurar slider de delay de página (siempre existe)
+	if (Atr_scanDelaySliderLow and Atr_scanDelaySliderHigh and Atr_scanDelaySlider and Atr_scanDelayValue) then
+		Atr_scanDelaySliderLow:SetText("0.3s");
+		Atr_scanDelaySliderHigh:SetText("2.0s");
+		Atr_scanDelaySlider:SetMinMaxValues(0.3, 2.0);
+		Atr_scanDelaySlider:SetValueStep(0.1);
+		Atr_scanDelaySlider:SetValue(AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY);
+		Atr_scanDelayValue:SetText(string.format("%.1fs", AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY));
+	end
+	
+	-- Configurar slider de margen de beneficio para crafteo (opcional)
+	if (Atr_craftProfitSlider and Atr_craftProfitSliderLow and Atr_craftProfitSliderHigh and Atr_craftProfitValue) then
+		Atr_craftProfitSliderLow:SetText("5%");
+		Atr_craftProfitSliderHigh:SetText("100%");
+		Atr_craftProfitSlider:SetMinMaxValues(5, 100);
+		Atr_craftProfitSlider:SetValueStep(5);
+		Atr_craftProfitSlider:SetValue(AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN);
+		Atr_craftProfitValue:SetText(AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN.."%");
+	end
 end
 
 -----------------------------------------
 
 function Atr_ScanningOptionsFrame_Save()
 
-    local origValues = zc.msg_str (AUCTIONATOR_SCAN_MINLEVEL, AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY or 0);
+    -- Obtener valores originales de forma segura
+    local origScanLevel = AUCTIONATOR_SCAN_MINLEVEL or 1;
+    local origPageDelay = (AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY) or 0.4;
+    local origMinQuality = (AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.MIN_SCAN_QUALITY) or 2;
+    local origProfitMargin = (AUCTIONATOR_SAVEDVARS and AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN) or 20;
+    
+    local origValues = zc.msg_str (origScanLevel, origPageDelay, origMinQuality, origProfitMargin);
 
 	AUCTIONATOR_SCAN_MINLEVEL = UIDropDownMenu_GetSelectedValue(Atr_scanLevelDD);
 
-	-- Guardar delay del escaneo
+	-- Guardar configuraciones
 	if (AUCTIONATOR_SAVEDVARS == nil) then AUCTIONATOR_SAVEDVARS = {}; end
-	local newDelay = Atr_scanDelaySlider:GetValue();
-	AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY = newDelay;
-	Atr_scanDelayValue:SetText(string.format("%.1fs", newDelay));
+	
+	-- Rareza mínima de inicio (solo si el dropdown existe)
+	if (Atr_scanMinQualityDD and UIDropDownMenu_GetSelectedValue) then
+		local newMinQuality = UIDropDownMenu_GetSelectedValue(Atr_scanMinQualityDD);
+		if (newMinQuality ~= nil) then
+			AUCTIONATOR_SAVEDVARS.MIN_SCAN_QUALITY = newMinQuality;
+		end
+	end
+	
+	-- Delay del escaneo
+	if (Atr_scanDelaySlider) then
+		local newDelay = Atr_scanDelaySlider:GetValue();
+		AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY = newDelay;
+		if (Atr_scanDelayValue) then
+			Atr_scanDelayValue:SetText(string.format("%.1fs", newDelay));
+		end
+	end
+	
+	-- Margen de beneficio del crafteo
+	if (Atr_craftProfitSlider) then
+		local newProfitMargin = Atr_craftProfitSlider:GetValue();
+		AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN = newProfitMargin;
+		if (Atr_craftProfitValue) then
+			Atr_craftProfitValue:SetText(math.floor(newProfitMargin).."%");
+		end
+	end
 
-    local newValues = zc.msg_str (AUCTIONATOR_SCAN_MINLEVEL, AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY);
+    local newValues = zc.msg_str (AUCTIONATOR_SCAN_MINLEVEL, AUCTIONATOR_SAVEDVARS.SCAN_PAGE_DELAY, 
+    	AUCTIONATOR_SAVEDVARS.MIN_SCAN_QUALITY or 2, AUCTIONATOR_SAVEDVARS.CRAFT_PROFIT_MARGIN or 20);
 
 	if (origValues ~= newValues) then
 		zc.msg_atr (ZT("scanning options saved"));
@@ -799,6 +858,50 @@ end
 function HideInterfaceOptionsMask()
 	if (gInterfaceOptionsMask) then
 		gInterfaceOptionsMask:Hide();
+	end
+end
+
+-----------------------------------------
+
+function Atr_scanMinQualityDD_Initialize()
+	-- Solo crear esta función si el dropdown existe
+	if (not Atr_scanMinQualityDD) then
+		return;
+	end
+	
+	local info = UIDropDownMenu_CreateInfo();
+	
+	Atr_AddMenuPick (info, "|cff9d9d9d"..ZT("Poor").."|r",			0, Atr_scanMinQualityDD_OnClick);
+	Atr_AddMenuPick (info, "|cffffffff"..ZT("Common").."|r",		1, Atr_scanMinQualityDD_OnClick);
+	Atr_AddMenuPick (info, "|cff1eff00"..ZT("Uncommon").."|r",		2, Atr_scanMinQualityDD_OnClick);
+	Atr_AddMenuPick (info, "|cff0070dd"..ZT("Rare").."|r",			3, Atr_scanMinQualityDD_OnClick);
+end
+
+-----------------------------------------
+
+function Atr_scanMinQualityDD_OnClick(self)
+	if (self and self.owner and self.value ~= nil) then
+		UIDropDownMenu_SetSelectedValue(self.owner, self.value);
+	end
+end
+
+-----------------------------------------
+
+function Atr_scanMinQualityDD_showTip(self)
+	if (GameTooltip and GameTooltip.SetOwner and GameTooltip.SetText and GameTooltip.AddLine and GameTooltip.Show) then
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT");
+		GameTooltip:SetText("Rareza mínima de inicio", 0.9, 1.0, 1.0);
+		GameTooltip:AddLine("Selecciona con qué rareza comenzar el escaneo. El sistema progresará automáticamente hasta épico.", 0.5, 0.5, 1.0, 1);
+		GameTooltip:Show();
+	end
+end
+
+-----------------------------------------
+
+function Atr_craftProfitSlider_OnValueChanged(self, value)
+	if (value ~= nil and Atr_craftProfitValue) then
+		value = math.max(5, math.min(100, value));
+		Atr_craftProfitValue:SetText(math.floor(value).."%");
 	end
 end
 
