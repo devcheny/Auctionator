@@ -235,6 +235,34 @@
 				</Layers>
 			</Frame>
 			
+			<!-- Campo para precio ideal -->
+			<Frame>
+				<Size><AbsDimension x="80" y="16" /></Size>
+				<Anchors><Anchor point="RIGHT"><Offset><AbsDimension x="-5" y="0"/></Offset></Anchor></Anchors>
+				<Frames>
+					<EditBox name="$parent_IdealPrice" autoFocus="false" blinkSpeed="0.5" historyLines="0">
+						<Size><AbsDimension x="60" y="14" /></Size>
+						<Anchors><Anchor point="RIGHT"><Offset><AbsDimension x="0" y="0"/></Offset></Anchor></Anchors>
+						<FontString inherits="ChatFontNormal"/>
+						<Scripts>
+							<OnTextChanged>
+								Atr_IdealPriceOnTextChanged(self);
+							</OnTextChanged>
+							<OnEnterPressed>
+								Atr_IdealPriceOnEnterPressed(self);
+								self:ClearFocus();
+							</OnEnterPressed>
+							<OnEscapePressed>
+								self:ClearFocus();
+							</OnEscapePressed>
+						</Scripts>
+					</EditBox>
+					<FontString name="$parent_IdealLabel" inherits="GameFontNormalSmall" text="Ideal:">
+						<Anchors><Anchor point="RIGHT" relativeTo="$parent_IdealPrice" relativePoint="LEFT"><Offset><AbsDimension x="-2" y="0"/></Offset></Anchor></Anchors>
+					</FontString>
+				</Frames>
+			</Frame>
+			
 		</Frames>
 
 		<PushedTexture file="Interface\HelpFrame\HelpFrameButton-Highlight">
@@ -841,6 +869,48 @@
 				</Scripts>
 			</Button>
 
+			<Button name="Atr_DealsButton" text="Lista Ofertas" inherits="UIPanelButtonTemplate" >
+				<Size><AbsDimension x="110" y="22"/>	</Size>
+				<Anchors><Anchor point="RIGHT" relativeTo="Atr_BargainButton" relativePoint="LEFT"><Offset><AbsDimension x="-5" y="0"/></Offset></Anchor></Anchors>
+				<Scripts>
+					<OnClick>
+						if (Atr_SearchShoppingListDeals) then
+							Atr_SearchShoppingListDeals();
+						end
+					</OnClick>
+					<OnEnter>
+						GameTooltip:SetOwner(self, "ANCHOR_TOP");
+						GameTooltip:SetText("Buscar ofertas en lista de compra");
+						GameTooltip:AddLine("Busca precios ideales o menores para los items de tu lista de compra seleccionada.", 1, 1, 1, true);
+						GameTooltip:Show();
+					</OnEnter>
+					<OnLeave>
+						GameTooltip:Hide();
+					</OnLeave>
+				</Scripts>
+			</Button>
+
+			<Button name="Atr_ShowDealsButton" text="Ver Ofertas" inherits="UIPanelButtonTemplate" >
+				<Size><AbsDimension x="90" y="22"/>	</Size>
+				<Anchors><Anchor point="RIGHT" relativeTo="Atr_DealsButton" relativePoint="LEFT"><Offset><AbsDimension x="-5" y="0"/></Offset></Anchor></Anchors>
+				<Scripts>
+					<OnClick>
+						if (Atr_ShowCurrentDeals) then
+							Atr_ShowCurrentDeals();
+						end
+					</OnClick>
+					<OnEnter>
+						GameTooltip:SetOwner(self, "ANCHOR_TOP");
+						GameTooltip:SetText("Mostrar ofertas del momento");
+						GameTooltip:AddLine("Muestra las mejores ofertas encontradas recientemente.", 1, 1, 1, true);
+						GameTooltip:Show();
+					</OnEnter>
+					<OnLeave>
+						GameTooltip:Hide();
+					</OnLeave>
+				</Scripts>
+			</Button>
+
 
 			<ScrollFrame name="AuctionatorScrollFrame" inherits="FauxScrollFrameTemplate">
 				<Size><AbsDimension x="588" y="196"/></Size>
@@ -921,6 +991,157 @@
 						<Scripts><OnClick>Atr_Onclick_Col3()</OnClick></Scripts>
 					</Button>
 
+				</Frames>
+			</Frame>
+
+			<!-- Campo de precio ideal para el item buscado -->
+			<Frame name="Atr_IdealPrice_Frame" hidden="true">
+				<Size><AbsDimension x="400" y="180"/></Size>
+				<Anchors><Anchor point="TOPLEFT" relativeTo="Atr_Search_Box" relativePoint="BOTTOMLEFT"><Offset><AbsDimension x="0" y="-10"/></Offset></Anchor></Anchors>
+				
+				<Layers>
+					<Layer level="BACKGROUND">
+						<FontString name="Atr_IdealPrice_Label" inherits="GameFontNormalSmall" text="Precio ideal:">
+							<Anchors><Anchor point="LEFT"><Offset><AbsDimension x="5" y="0"/></Offset></Anchor></Anchors>
+						</FontString>
+						<FontString name="Atr_IdealPrice_GoldLabel" inherits="GameFontNormalSmall" text="g">
+							<Anchors><Anchor point="LEFT" relativeTo="Atr_IdealPrice_Label" relativePoint="RIGHT"><Offset><AbsDimension x="50" y="0"/></Offset></Anchor></Anchors>
+						</FontString>
+						<FontString name="Atr_IdealPrice_SilverLabel" inherits="GameFontNormalSmall" text="s">
+							<Anchors><Anchor point="LEFT" relativeTo="Atr_IdealPrice_GoldLabel" relativePoint="RIGHT"><Offset><AbsDimension x="40" y="0"/></Offset></Anchor></Anchors>
+						</FontString>
+						<FontString name="Atr_IdealPrice_CopperLabel" inherits="GameFontNormalSmall" text="c">
+							<Anchors><Anchor point="LEFT" relativeTo="Atr_IdealPrice_SilverLabel" relativePoint="RIGHT"><Offset><AbsDimension x="40" y="0"/></Offset></Anchor></Anchors>
+						</FontString>
+					</Layer>
+				</Layers>
+				
+				<Frames>
+					<EditBox name="Atr_IdealPrice_GoldBox" autoFocus="false" blinkSpeed="0.5" historyLines="0" inherits="InputBoxTemplate" numeric="true">
+						<Size><AbsDimension x="40" y="20" /></Size>
+						<Anchors><Anchor point="RIGHT" relativeTo="Atr_IdealPrice_GoldLabel" relativePoint="LEFT"><Offset><AbsDimension x="-2" y="0"/></Offset></Anchor></Anchors>
+						<FontString inherits="ChatFontNormal"/>
+						<Scripts>
+							<OnLoad>
+								if Atr_IdealPriceOnShow then
+									Atr_IdealPriceOnShow(self);
+								end
+							</OnLoad>
+							<OnShow>
+								if Atr_IdealPriceOnShow then
+									Atr_IdealPriceOnShow(self);
+								end
+							</OnShow>
+							<OnTextChanged>
+								if Atr_IdealPriceOnTextChanged then
+									Atr_IdealPriceOnTextChanged(self);
+								end
+							</OnTextChanged>
+							<OnEnterPressed>
+								if Atr_SaveIdealPriceFromMoneyUI then
+									Atr_SaveIdealPriceFromMoneyUI();
+								end
+								self:ClearFocus();
+							</OnEnterPressed>
+							<OnEscapePressed>
+								self:ClearFocus();
+							</OnEscapePressed>
+						</Scripts>
+					</EditBox>
+					
+					<EditBox name="Atr_IdealPrice_SilverBox" autoFocus="false" blinkSpeed="0.5" historyLines="0" inherits="InputBoxTemplate" numeric="true">
+						<Size><AbsDimension x="30" y="20" /></Size>
+						<Anchors><Anchor point="RIGHT" relativeTo="Atr_IdealPrice_SilverLabel" relativePoint="LEFT"><Offset><AbsDimension x="-2" y="0"/></Offset></Anchor></Anchors>
+						<FontString inherits="ChatFontNormal"/>
+						<Scripts>
+							<OnLoad>
+								if Atr_IdealPriceOnShow then
+									Atr_IdealPriceOnShow(self);
+								end
+							</OnLoad>
+							<OnShow>
+								if Atr_IdealPriceOnShow then
+									Atr_IdealPriceOnShow(self);
+								end
+							</OnShow>
+							<OnTextChanged>
+								if Atr_IdealPriceOnTextChanged then
+									Atr_IdealPriceOnTextChanged(self);
+								end
+							</OnTextChanged>
+							<OnEnterPressed>
+								if Atr_SaveIdealPriceFromMoneyUI then
+									Atr_SaveIdealPriceFromMoneyUI();
+								end
+								self:ClearFocus();
+							</OnEnterPressed>
+							<OnEscapePressed>
+								self:ClearFocus();
+							</OnEscapePressed>
+						</Scripts>
+					</EditBox>
+					
+					<EditBox name="Atr_IdealPrice_CopperBox" autoFocus="false" blinkSpeed="0.5" historyLines="0" inherits="InputBoxTemplate" numeric="true">
+						<Size><AbsDimension x="30" y="20" /></Size>
+						<Anchors><Anchor point="RIGHT" relativeTo="Atr_IdealPrice_CopperLabel" relativePoint="LEFT"><Offset><AbsDimension x="-2" y="0"/></Offset></Anchor></Anchors>
+						<FontString inherits="ChatFontNormal"/>
+						<Scripts>
+							<OnLoad>
+								if Atr_IdealPriceOnShow then
+									Atr_IdealPriceOnShow(self);
+								end
+							</OnLoad>
+							<OnShow>
+								if Atr_IdealPriceOnShow then
+									Atr_IdealPriceOnShow(self);
+								end
+							</OnShow>
+							<OnTextChanged>
+								if Atr_IdealPriceOnTextChanged then
+									Atr_IdealPriceOnTextChanged(self);
+								end
+							</OnTextChanged>
+							<OnEnterPressed>
+								if Atr_SaveIdealPriceFromMoneyUI then
+									Atr_SaveIdealPriceFromMoneyUI();
+								end
+								self:ClearFocus();
+							</OnEnterPressed>
+							<OnEscapePressed>
+								self:ClearFocus();
+							</OnEscapePressed>
+						</Scripts>
+					</EditBox>
+					
+					<Button name="Atr_IdealPrice_SaveButton" text="Guardar" inherits="UIPanelButtonTemplate">
+						<Size><AbsDimension x="60" y="20"/></Size>
+						<Anchors><Anchor point="LEFT" relativeTo="Atr_IdealPrice_CopperLabel" relativePoint="RIGHT"><Offset><AbsDimension x="10" y="0"/></Offset></Anchor></Anchors>
+						<Scripts>
+							<OnClick>
+								if Atr_SaveIdealPriceFromMoneyUI then
+									Atr_SaveIdealPriceFromMoneyUI();
+								end
+							</OnClick>
+						</Scripts>
+						<NormalFont style="GameFontNormalSmall"/>
+						<HighlightFont style="GameFontHighlightSmall"/>
+						<DisabledFont style="GameFontDisableSmall"/>
+					</Button>
+					
+					<Button name="Atr_IdealPrice_ClearButton" text="X" inherits="UIPanelButtonTemplate">
+						<Size><AbsDimension x="20" y="20"/></Size>
+						<Anchors><Anchor point="LEFT" relativeTo="Atr_IdealPrice_SaveButton" relativePoint="RIGHT"><Offset><AbsDimension x="3" y="0"/></Offset></Anchor></Anchors>
+						<Scripts>
+							<OnClick>
+								if Atr_ClearIdealPriceFromUI then
+									Atr_ClearIdealPriceFromUI();
+								end
+							</OnClick>
+						</Scripts>
+						<NormalFont style="GameFontNormalSmall"/>
+						<HighlightFont style="GameFontHighlightSmall"/>
+						<DisabledFont style="GameFontDisableSmall"/>
+					</Button>
 				</Frames>
 			</Frame>
 
