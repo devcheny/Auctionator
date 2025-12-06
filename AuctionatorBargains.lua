@@ -20,11 +20,36 @@ local function Atr_Timer_After(delay, func)
 end
 
 -- Variables globales
-local BARGAIN_THRESHOLD = 0.7; -- 30% de descuento mínimo para considerar una oferta
 local isScanning = false;
 local scanResults = {};
 local currentScanPage = 0;
 local totalScanPages = 0;
+
+-- Configuración de descuento (valor por defecto 30%)
+-- Se guarda automáticamente en las variables globales de Auctionator
+if not AUCTIONATOR_BARGAIN_DISCOUNT then
+    AUCTIONATOR_BARGAIN_DISCOUNT = 30;
+end
+
+-- Función para guardar la configuración
+local function Atr_SaveBargainConfig()
+    -- Se guarda automáticamente al ser una variable global de Auctionator
+    if AUCTIONATOR_DB then
+        AUCTIONATOR_DB.bargain_discount = AUCTIONATOR_BARGAIN_DISCOUNT;
+    end
+end
+
+-- Función para cargar la configuración
+local function Atr_LoadBargainConfig()
+    if AUCTIONATOR_DB and AUCTIONATOR_DB.bargain_discount then
+        AUCTIONATOR_BARGAIN_DISCOUNT = AUCTIONATOR_DB.bargain_discount;
+    end
+end
+
+-- Función para obtener el threshold actual (convierte % a decimal)
+local function Atr_GetBargainThreshold()
+    return (100 - AUCTIONATOR_BARGAIN_DISCOUNT) / 100;
+end
 
 -- Constante para items por página (en caso de que no exista en Classic)
 local ITEMS_PER_PAGE = NUM_AUCTION_ITEMS_PER_PAGE or 50;
@@ -103,8 +128,9 @@ function Atr_IsItemBargain(itemName, currentPrice, stackSize)
 	
 	local historicalPricePerUnit = historicalPrice;
 	
-	-- Verificar si es una ganga (precio actual <= 70% del precio histórico)
-	local discountThreshold = historicalPricePerUnit * BARGAIN_THRESHOLD;
+	-- Verificar si es una ganga usando el threshold configurable
+	local threshold = Atr_GetBargainThreshold();
+	local discountThreshold = historicalPricePerUnit * threshold;
 	
 	if pricePerUnit <= discountThreshold then
 		local discountPercent = math.floor(((historicalPricePerUnit - pricePerUnit) / historicalPricePerUnit) * 100);
@@ -391,13 +417,47 @@ function Atr_HideBargainButton()
 end
 
 -----------------------------------------
--- Función para configurar el umbral de descuento
+-- Función para mostrar tooltip dinámico del botón de gangas
 -----------------------------------------
-function Atr_SetBargainThreshold(threshold)
-	if threshold and threshold > 0 and threshold < 1 then
-		BARGAIN_THRESHOLD = threshold;
-		local msg = string.format("Umbral de oferta establecido en %d%% de descuento", math.floor((1 - threshold) * 100));
-		zc.msg_anm(msg);
+function Atr_ShowBargainButtonTooltip(button)
+	GameTooltip:SetOwner(button, "ANCHOR_RIGHT");
+	GameTooltip:SetText("Buscador de Ofertas", 1, 1, 1);
+	GameTooltip:AddLine("Escanea la casa de subastas en busca de items con precios por debajo del promedio histórico.", 1, 1, 1, true);
+	GameTooltip:AddLine(" ");
+	
+	local currentDiscount = AUCTIONATOR_BARGAIN_DISCOUNT or 30;
+	local threshold = 100 - currentDiscount;
+	GameTooltip:AddLine("Descuento mínimo configurado: " .. currentDiscount .. "%", 0.8, 0.8, 0.8);
+	GameTooltip:AddLine("Busca items al " .. threshold .. "% o menos del precio histórico", 0.7, 0.7, 0.7);
+	GameTooltip:AddLine(" ");
+	GameTooltip:AddLine("Configurable en:", 0.6, 0.6, 1);
+	GameTooltip:AddLine("• Opciones de Interfaz > Addons > Auctionator", 0.5, 0.8, 1);
+	GameTooltip:AddLine("• Comando: '/atrbargain set [%]'", 0.5, 0.8, 1);
+	GameTooltip:Show();
+end
+
+-----------------------------------------
+-- Función para configurar el porcentaje de descuento
+-----------------------------------------
+function Atr_SetBargainDiscount(discountPercent)
+	if discountPercent and discountPercent >= 5 and discountPercent <= 80 then
+		AUCTIONATOR_BARGAIN_DISCOUNT = discountPercent;
+		Atr_SaveBargainConfig(); -- Guardar configuración
+		local msg = string.format("Descuento mínimo establecido en %d%%", discountPercent);
+		if zc and zc.msg_anm then
+			zc.msg_anm(msg);
+		else
+			print("Auctionator: " .. msg);
+		end
+		return true;
+	else
+		local errorMsg = "El porcentaje debe estar entre 5% y 80%";
+		if zc and zc.msg_anm then
+			zc.msg_anm(errorMsg);
+		else
+			print("Auctionator: " .. errorMsg);
+		end
+		return false;
 	end
 end
 
@@ -462,6 +522,18 @@ function SlashCmdList.ATRBARGAIN(msg)
 	elseif msg == "scan" or msg == "escanear" then
 		print("Auctionator: Iniciando escaneo manual...");
 		Atr_StartBargainScan();
+	elseif msg:match("^set%s+(%d+)$") or msg:match("^establecer%s+(%d+)$") then
+		local percent = tonumber(msg:match("(%d+)"));
+		if percent and percent >= 5 and percent <= 80 then
+			AUCTIONATOR_BARGAIN_DISCOUNT = percent;
+			Atr_SaveBargainConfig();
+			print("Auctionator: Descuento mínimo establecido en " .. percent .. "%");
+			print("Ahora buscaré items con precios " .. percent .. "% más baratos que el histórico");
+			print("Ejemplo: Si un item cuesta 100g normalmente, buscaré ofertas a " .. (100 - percent) .. "g o menos");
+		else
+			print("Auctionator: El porcentaje debe estar entre 5% y 80%");
+			print("Ejemplos: '/atrbargain set 30' para 30% de descuento");
+		end
 	elseif msg == "show" or msg == "mostrar" then
 		if Atr_BargainButton then
 			Atr_BargainButton:Show();
@@ -508,6 +580,14 @@ function SlashCmdList.ATRBARGAIN(msg)
 		print("zc.msg_anm existe:", zc and zc.msg_anm and "SÍ" or "NO");
 		print("zc.priceToMoneyString existe:", zc and zc.priceToMoneyString and "SÍ" or "NO");
 		print("CanSendAuctionQuery existe:", CanSendAuctionQuery and "SÍ" or "NO");
+		
+		-- Mostrar configuración actual
+		print("=== CONFIGURACIÓN ACTUAL ===");
+		print("Descuento mínimo configurado: " .. AUCTIONATOR_BARGAIN_DISCOUNT .. "%");
+		local threshold = Atr_GetBargainThreshold();
+		print("Umbral de precio: " .. math.floor(threshold * 100) .. "% del precio histórico");
+		print("Ejemplo: Si un item cuesta 100g, buscaré ofertas a " .. math.floor(threshold * 100) .. "g o menos");
+		
 		print("===============================");
 	elseif msg == "debug" then
 		print("=== DEBUG AUCTIONATOR BARGAIN BUTTON ===");
@@ -528,19 +608,34 @@ function SlashCmdList.ATRBARGAIN(msg)
 		if threshold then
 			Atr_SetBargainThreshold(threshold / 100); -- Convertir porcentaje a decimal
 		else
-			local showMsg = "Uso: /atrbargain [porcentaje] | test | scan | show | check | debug";
+			local showMsg = "=== COMANDOS DISPONIBLES ===";
 			if zc and zc.msg_anm then
 				zc.msg_anm(showMsg);
-				zc.msg_anm("Ejemplos:");
-				zc.msg_anm("  /atrbargain 30 (para 30% de descuento mínimo)");
-				zc.msg_anm("  /atrbargain scan (escanear ofertas manualmente)");
-				zc.msg_anm("  /atrbargain check (verificar bases de datos)");
-				zc.msg_anm(string.format("Umbral actual: %d%%", math.floor((1 - BARGAIN_THRESHOLD) * 100)));
+				zc.msg_anm("/atrbargain scan - Iniciar búsqueda de gangas");
+				zc.msg_anm("/atrbargain set [%] - Establecer descuento mínimo (5-80%)");
+				zc.msg_anm("/atrbargain check - Verificar bases de datos");
+				zc.msg_anm("/atrbargain stop - Detener búsqueda");
+				zc.msg_anm("Descuento actual: " .. AUCTIONATOR_BARGAIN_DISCOUNT .. "%");
 			else
 				print(showMsg);
-				print("  /atrbargain scan (escanear ofertas manualmente)");
-				print("  /atrbargain check (verificar bases de datos)");
+				print("/atrbargain scan - Iniciar búsqueda de gangas");
+				print("/atrbargain set [%] - Establecer descuento mínimo (5-80%)");
+				print("/atrbargain check - Verificar bases de datos");
+				print("/atrbargain stop - Detener búsqueda");
+				print("Descuento actual: " .. AUCTIONATOR_BARGAIN_DISCOUNT .. "%");
 			end
 		end
 	end
 end
+
+-----------------------------------------
+-- Evento para cargar configuración al iniciar
+-----------------------------------------
+local configFrame = CreateFrame("Frame");
+configFrame:RegisterEvent("ADDON_LOADED");
+configFrame:SetScript("OnEvent", function(self, event, addonName)
+	if addonName == "Auctionator" then
+		Atr_LoadBargainConfig();
+		self:UnregisterEvent("ADDON_LOADED");
+	end
+end);

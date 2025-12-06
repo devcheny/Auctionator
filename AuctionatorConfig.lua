@@ -3,6 +3,28 @@ local addonName, addonTable = ...;
 local zc = addonTable.zc;
 
 -----------------------------------------
+-- Funciones para manejar el slider de descuento de gangas
+-----------------------------------------
+
+function Atr_UpdateBargainDiscountSlider()
+	if AuctionatorOption_BargainDiscount_Slider then
+		local slider = AuctionatorOption_BargainDiscount_Slider;
+		slider:SetValue(AUCTIONATOR_BARGAIN_DISCOUNT or 30);
+		AuctionatorOption_BargainDiscount_Value:SetText(slider:GetValue().."%");
+	end
+end
+
+function Atr_SetBargainDiscountFromSlider(value)
+	AUCTIONATOR_BARGAIN_DISCOUNT = math.floor(value);
+	-- Guardar configuración si la función está disponible
+	if Atr_SaveBargainConfig then
+		Atr_SaveBargainConfig();
+	elseif AUCTIONATOR_DB then
+		AUCTIONATOR_DB.bargain_discount = AUCTIONATOR_BARGAIN_DISCOUNT;
+	end
+end
+
+-----------------------------------------
 
 function Atr_LoadOptionsSubPanel (f, name, title, subtitle)
 

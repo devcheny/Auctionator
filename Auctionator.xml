@@ -833,12 +833,7 @@
 						end
 					</OnClick>
 					<OnEnter>
-						GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-						GameTooltip:SetText("Buscador de Ofertas");
-						GameTooltip:AddLine("Escanea la casa de subastas en busca de items con precios por debajo del promedio histórico.", 1, 1, 1, true);
-						GameTooltip:AddLine(" ");
-						GameTooltip:AddLine("Umbral de descuento mínimo: 30%", 0.8, 0.8, 0.8);
-						GameTooltip:Show();
+						Atr_ShowBargainButtonTooltip(self);
 					</OnEnter>
 					<OnLeave>
 						GameTooltip:Hide();

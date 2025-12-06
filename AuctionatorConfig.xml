@@ -56,6 +56,40 @@
 		</Frames>
 	</Frame>
 	
+  <!-- Template for a slider option --> 
+
+	<Frame name="Atr_SliderOptionTemplate" virtual="true">
+		<Size><AbsDimension x="360" y="60"/>  </Size>
+		<Anchors>
+			<Anchor point="LEFT" ><Offset><AbsDimension x="20"/></Offset></Anchor>
+			<Anchor point="RIGHT"><Offset><AbsDimension x="-20"/></Offset></Anchor>
+		</Anchors>
+		<Layers>
+			<Layer level="OVERLAY">
+				<FontString name="$parent_Text" inherits="GameFontHighlight" justifyH="LEFT">
+					<Size><AbsDimension x="280" y="20" /></Size>		
+					<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="0" y="0"/></Offset></Anchor></Anchors>
+				</FontString>
+				<FontString name="$parent_Value" inherits="GameFontNormal" justifyH="RIGHT">
+					<Size><AbsDimension x="60" y="20" /></Size>		
+					<Anchors><Anchor point="TOPRIGHT"><Offset><AbsDimension x="0" y="0"/></Offset></Anchor></Anchors>
+				</FontString>
+			</Layer>
+		</Layers>
+		<Frames>
+			<Slider name="$parent_Slider" inherits="OptionsSliderTemplate">
+				<Size><AbsDimension x="300" y="20"/>  </Size>
+				<Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="10" y="-25"/></Offset></Anchor></Anchors>
+				<Scripts>
+					<OnValueChanged>
+						local value = math.floor(self:GetValue());
+						getglobal(self:GetParent():GetName().."_Value"):SetText(value.."%");
+						Atr_SetBargainDiscountFromSlider(value);
+					</OnValueChanged>
+				</Scripts>
+			</Slider>
+		</Frames>
+	</Frame>
 
   <!-- Template for auctionator options panels --> 
 
@@ -203,6 +237,27 @@
 						UIDropDownMenu_Initialize(self, AuctionatorOption_Deftab_Initialize);
 						UIDropDownMenu_JustifyText (AuctionatorOption_Deftab, "LEFT");
 					</OnLoad>
+				</Scripts>
+			</Frame>
+
+			<!-- Control del porcentaje de descuento para gangas -->
+			<Frame name="AuctionatorOption_BargainDiscount" inherits="Atr_SliderOptionTemplate">
+				<Anchors><Anchor point="TOP"><Offset><AbsDimension y="-340"/></Offset></Anchor></Anchors>
+				<Scripts>
+					<OnLoad>
+						AuctionatorOption_BargainDiscount_Text:SetText("Descuento mínimo para ofertas:");
+						local slider = AuctionatorOption_BargainDiscount_Slider;
+						slider:SetMinMaxValues(5, 80);
+						slider:SetValueStep(5);
+						slider:SetValue(AUCTIONATOR_BARGAIN_DISCOUNT or 30);
+						getglobal(slider:GetName().."Low"):SetText("5%");
+						getglobal(slider:GetName().."High"):SetText("80%");
+						AuctionatorOption_BargainDiscount_Value:SetText(slider:GetValue().."%");
+					</OnLoad>
+					<OnShow>
+						-- Actualizar valor cuando se muestre la opción
+						Atr_UpdateBargainDiscountSlider();
+					</OnShow>
 				</Scripts>
 			</Frame>
 			
