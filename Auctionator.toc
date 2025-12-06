@@ -20,6 +20,7 @@ zcUtils.lua
 Auctionator.lua
 AuctionatorShop.lua
 AuctionatorEarnings.lua
+AuctionatorBargains.lua
 
 Auctionator.xml
 

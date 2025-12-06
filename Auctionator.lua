@@ -959,9 +959,19 @@ function Atr_AuctionFrameTab_OnClick (self, index, down)
 			Atr_DropDownSL:Show();
 			Atr_Hlist:SetHeight (252);
 			Atr_Hlist_ScrollFrame:SetHeight (252);
+			
+			-- Mostrar botón de búsqueda de ofertas en la pestaña Buy
+			if Atr_ShowBargainButton then
+				Atr_ShowBargainButton();
+			end
 		else
 			Atr_Hlist:SetHeight (335);
 			Atr_Hlist_ScrollFrame:SetHeight (335);
+			
+			-- Ocultar el botón en otras pestañas
+			if Atr_HideBargainButton then
+				Atr_HideBargainButton();
+			end
 		end
 
 		if (index == Atr_FindTabIndex(BUY_TAB) or index == Atr_FindTabIndex(SELL_TAB)) then

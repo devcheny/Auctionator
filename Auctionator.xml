@@ -823,6 +823,29 @@
 				</Scripts>
 			</Button>
 
+			<Button name="Atr_BargainButton" text="Buscar Ofertas" inherits="UIPanelButtonTemplate" >
+				<Size><AbsDimension x="110" y="22"/>	</Size>
+				<Anchors><Anchor point="RIGHT" relativeTo="Atr_Buy1_Button" relativePoint="LEFT"><Offset><AbsDimension x="-10" y="0"/></Offset></Anchor></Anchors>
+				<Scripts>
+					<OnClick>
+						if (Atr_StartBargainScan) then
+							Atr_StartBargainScan();
+						end
+					</OnClick>
+					<OnEnter>
+						GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
+						GameTooltip:SetText("Buscador de Ofertas");
+						GameTooltip:AddLine("Escanea la casa de subastas en busca de items con precios por debajo del promedio histórico.", 1, 1, 1, true);
+						GameTooltip:AddLine(" ");
+						GameTooltip:AddLine("Umbral de descuento mínimo: 30%", 0.8, 0.8, 0.8);
+						GameTooltip:Show();
+					</OnEnter>
+					<OnLeave>
+						GameTooltip:Hide();
+					</OnLeave>
+				</Scripts>
+			</Button>
+
 
 			<ScrollFrame name="AuctionatorScrollFrame" inherits="FauxScrollFrameTemplate">
 				<Size><AbsDimension x="588" y="196"/></Size>

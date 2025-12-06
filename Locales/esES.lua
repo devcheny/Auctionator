@@ -239,5 +239,14 @@ AtrL["Net Earnings: "] = "Ganancias netas: "
 AtrL["AH Fee (5%%): "] = "Comisión CS (5%%): "
 AtrL["Expected Earnings: "] = "Total si se venden: "
 
+-- Bargain Hunter (Buscador de Ofertas)
+AtrL["Search Bargains"] = "Buscar Ofertas"
+AtrL["Scanning..."] = "Escaneando..."
+AtrL["No bargains found at this time."] = "No se encontraron ofertas interesantes en este momento."
+AtrL["Found %d bargains!"] = "¡Encontradas %d ofertas!"
+AtrL["Bargain Hunter"] = "Buscador de Ofertas"
+AtrL["Scans the auction house for items priced below historical average."] = "Escanea la casa de subastas en busca de items con precios por debajo del promedio histórico."
+AtrL["Minimum discount threshold: %d%%"] = "Umbral de descuento mínimo: %d%%"
+
 end
  
